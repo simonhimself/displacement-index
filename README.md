@@ -1,100 +1,62 @@
 # The Displacement Index
 
-**Is AI prosperity reaching the real economy?**
+The Displacement Index is a public macro dashboard that tracks whether AI-driven productivity gains are spreading broadly through the economy or concentrating alongside labor and credit stress.
 
-A public, data-driven dashboard tracking whether AI-driven productivity gains are translating into broad prosperity — or hollowing out the economy through white-collar displacement, spending weakness, credit stress, and mortgage instability.
+## What it tracks
 
-- **Live site:** https://displacementindex.com
-- **Worker URL:** https://displacement-index.simons.workers.dev
-- **Repo:** https://github.com/simonhimself/displacement-index
+The model follows a five-link chain:
 
----
+1. **White-Collar Displacement**
+2. **Consumer Spending**
+3. **Ghost GDP** (productivity vs wage growth divergence)
+4. **Credit Stress**
+5. **Mortgage & Housing Stress**
 
-## Current Architecture (Production)
+Each link is scored from underlying indicators, then combined into a composite **0–100 Displacement Index**.
 
-The dashboard is fully managed on Cloudflare and updates itself automatically:
+## Data sources
 
-- **Cloudflare Workers** runs the API and scheduled refresh logic.
-- **Workers Static Assets** serves the frontend from the same deployment.
-- **Cloudflare KV** stores the latest dataset plus versioned snapshots.
-- **Cron Trigger** refreshes data every 6 hours (`0 */6 * * *`, UTC).
-- **Worker Secrets** store runtime credentials (`FRED_API_KEY`, `REFRESH_TOKEN`).
-- **Workers Observability** is enabled for logs and runtime diagnostics.
+- **FRED** (macro/labor/credit/housing time series)
+- **Indeed Hiring Lab** (job postings, CC-BY-4.0)
 
----
+The dashboard currently uses 17 FRED series plus selected Indeed sector series.
 
-## Data Sources
+## Tech stack
 
-- **FRED** (St. Louis Fed API; underlying sources include BLS/BEA/Census/FDIC/ICE-BofA/UMich)
-  - 17 macro series used across displacement/spending/ghost GDP/credit/mortgage/context
-- **Indeed Hiring Lab** (CC-BY-4.0)
-  - Aggregate postings + selected white-collar sectors
+- Cloudflare Workers (API + scheduled refresh)
+- Workers Static Assets (frontend hosting)
+- Cloudflare KV (snapshot storage)
+- Cron trigger (`0 */6 * * *`, every 6 hours UTC)
 
-Derived indicators are computed in the Worker:
-- Ghost GDP
-- Displacement Velocity
-- Chain link statuses (normal/elevated/warning/critical)
-- Composite Displacement Index (0–100)
-
----
-
-## API Endpoints
-
-- `GET /api/health`
-- `GET /api/indicators`
-- `GET /api/fred_raw`
-- `GET /api/indeed_raw`
-- `GET /api/runs` (recent refresh run log)
-- `POST /api/refresh` (Bearer token protected)
-
-`/api/health` now returns:
-- **200** when healthy
-- **503** when unhealthy (for Cloudflare Health Check alerting)
-
----
-
-## Project Structure
+## Project structure
 
 ```text
-├── site/                 # Static frontend (HTML/CSS/JS)
+├── site/                 # Frontend (HTML/CSS/JS)
 │   ├── index.html
 │   ├── css/style.css
 │   ├── js/app.js
 │   └── pages/
 ├── src/
-│   └── worker.ts         # Worker API + cron refresh pipeline
-├── wrangler.jsonc        # Worker/KV/assets/cron/observability config
-├── PRD.md
-├── TASKS.md
-├── PR_STABILITY.md
-├── scripts/              # Legacy/local Python pipeline (not production path)
-└── data/                 # Legacy/local pipeline outputs
+│   └── worker.ts         # API + refresh pipeline
+├── wrangler.jsonc        # Cloudflare config
+├── PRD.md                # Product requirements
+├── TASKS.md              # Project tracker
+├── scripts/              # Legacy/local research scripts
+└── data/                 # Legacy/local outputs
 ```
 
----
-
-## Local Development
+## Local development
 
 ```bash
-# from project root
 npm run dev
 ```
 
-Deploy:
+## Deploy
 
 ```bash
 npm run deploy
 ```
 
-Manual refresh (requires token):
-
-```bash
-curl -X POST https://displacementindex.com/api/refresh \
-  -H "Authorization: Bearer <REFRESH_TOKEN>"
-```
-
----
-
 ## Disclaimer
 
-The Displacement Index is an informational measurement tool, not investment advice.
+This project is an informational measurement tool and does not constitute financial advice.
