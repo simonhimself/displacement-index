@@ -1058,18 +1058,27 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
 
     const healthy = !!lastSuccess && (ageMinutes === null ? true : ageMinutes < 12 * 60) && failures < 3;
 
-    return jsonResponse({
-      ok: true,
-      healthy,
-      last_updated: lastUpdated,
-      last_attempt: lastAttempt,
-      last_success: lastSuccess,
-      last_error: lastError || null,
-      consecutive_failures: failures,
-      latest_version: latestVersion,
-      last_duration_ms: durationMs,
-      age_minutes: ageMinutes,
-    });
+    return jsonResponse(
+      {
+        ok: true,
+        healthy,
+        last_updated: lastUpdated,
+        last_attempt: lastAttempt,
+        last_success: lastSuccess,
+        last_error: lastError || null,
+        consecutive_failures: failures,
+        latest_version: latestVersion,
+        last_duration_ms: durationMs,
+        age_minutes: ageMinutes,
+      },
+      {
+        // Health checks should treat stale/failed refresh as unhealthy.
+        status: healthy ? 200 : 503,
+        headers: {
+          'cache-control': 'no-store',
+        },
+      },
+    );
   }
 
   if (url.pathname === '/api/indicators') {
