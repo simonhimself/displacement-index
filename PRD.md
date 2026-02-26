@@ -55,34 +55,42 @@ We track 5 links in a macro chain. Each link has 2-4 indicators. Each indicator 
 
 ## Data Architecture
 
-### Source: FRED API (free, 120 req/min, API key required)
+### Source: FRED API (API key)
 
-| # | Indicator | FRED Series | Frequency | Lag |
-|---|-----------|-------------|-----------|-----|
-| 1 | Unemployment: Professional & Business Services | LNU04032239 | Monthly | ~2 weeks |
-| 2 | Unemployment: Information Industry | LNU04032237 | Monthly | ~2 weeks |
-| 3 | Employment: Prof/Scientific/Tech Services | CES6054000001 | Monthly | ~2 weeks |
-| 4 | Real Personal Consumption | PCEC96 | Monthly | ~4 weeks |
-| 5 | Consumer Sentiment (UMich) | UMCSENT | Monthly | ~2 weeks |
-| 6 | Retail Sales | RSAFS | Monthly | ~2 weeks |
-| 7 | M2 Money Velocity | M2V | Quarterly | ~2 months |
-| 8 | HY Credit Spreads (ICE BofA) | BAMLH0A0HYM2 | Daily | 1 day |
-| 9 | CCC & Lower Spreads | BAMLH0A3HYC | Daily | 1 day |
-| 10 | Consumer Loan Delinquency | DRCLACBS | Quarterly | ~2 months |
-| 11 | Mortgage Delinquency (Single-Family) | DRSFRMACBS | Quarterly | ~2 months |
-| 12 | Nonfarm Productivity (Output/Hour) | OPHNFB | Quarterly | ~2 months |
-| 13 | Real Median Weekly Earnings | LES1252881600Q | Quarterly | ~2 months |
+Core chain + context series currently used:
 
-### Source: WARN Firehose (free API, daily)
+| Category | Indicator | FRED Series | Frequency |
+|---|---|---|---|
+| Displacement | Unemployment: Prof & Business Services | LNU04032239 | Monthly |
+| Displacement | Unemployment: Information Industry | LNU04032237 | Monthly |
+| Displacement | Employment: Prof/Sci/Tech Services | CES6054000001 | Monthly |
+| Baseline | Unemployment Rate (overall) | UNRATE | Monthly |
+| Spending | Real Personal Consumption | PCEC96 | Monthly |
+| Spending | Consumer Sentiment (UMich) | UMCSENT | Monthly |
+| Spending | Retail Sales | RSAFS | Monthly |
+| Ghost GDP | Output per hour (productivity) | OPHNFB | Quarterly |
+| Ghost GDP | Real median weekly earnings | LES1252881600Q | Quarterly |
+| Ghost GDP | Velocity of M2 | M2V | Quarterly |
+| Credit | HY OAS | BAMLH0A0HYM2 | Daily |
+| Credit | CCC & Lower OAS | BAMLH0A3HYC | Daily |
+| Credit | Consumer loan delinquency | DRCLACBS | Quarterly |
+| Mortgage | SF mortgage delinquency | DRSFRMACBS | Quarterly |
+| Context | New business applications | BABATOTALSAUS | Monthly |
+| Context | Construction employment | USCONS | Monthly |
+| Context | Job openings (JOLTS) | JTSJOL | Monthly |
 
-- Mass layoff notices by sector
-- Can filter for tech/professional services
-- LEADING indicator (60 days ahead of actual layoffs)
+### Source: Unemployment Claims (FRED)
 
-### Source: S&P 500 / Market Data
+- **ICSA** (weekly initial claims)
+- **CCSA** (weekly continued claims)
 
-- Yahoo Finance API or similar free source
-- Daily close
+### Source: Indeed Hiring Lab (public GitHub, CC-BY-4.0)
+
+- Aggregate job postings index (US)
+- Sector-level postings for key white-collar categories (currently: Software Development, Marketing, Media & Communications, Banking & Finance, Accounting)
+
+### Market data
+Not currently included in the index MVP (can add later if desired).
 
 ### Derived Indicators (we compute)
 
@@ -90,24 +98,29 @@ We track 5 links in a macro chain. Each link has 2-4 indicators. Each indicator 
 - **Displacement Velocity:** Rate of change in white-collar unemployment vs overall
 - **Chain Tension:** Composite of all 5 links — how many are flashing
 
-## Tech Stack
+## Tech Stack (current)
 
-### Option A: Static Site + VPS Data Pipeline (recommended)
-- **Site:** Static HTML/JS (or Astro/11ty), hosted on Cloudflare Pages (free)
-- **Data pipeline:** Python script on our VPS, runs via cron
-  - Fetches FRED + WARN data
-  - Computes derived indicators
-  - Writes JSON files
-  - Pushes to git repo → auto-deploys to Cloudflare Pages
-- **Charts:** Chart.js or D3.js (client-side rendering)
-- **Newsletter:** Buttondown (free tier: 100 subscribers) or Substack (free, but less control)
-- **Domain:** ~$10/year
+### Workers + Static Assets + Cron + KV (deployed)
 
-### Why not a dynamic backend?
-- Our VPS is 4GB, already running OpenClaw
-- FRED data updates at most daily, mostly monthly
-- Static site = zero server costs, infinite scale, no maintenance
-- Data freshness is fine with daily cron updates
+We moved to a Cloudflare-native, self-updating architecture:
+
+- **Hosting:** Cloudflare **Workers** with **Static Assets** binding (serves `site/`)
+- **Data refresh:** Cloudflare **Cron Trigger** (every 6 hours)
+- **Storage:** Cloudflare **KV** for latest snapshot blobs
+- **APIs:** Worker exposes:
+  - `GET /api/health`
+  - `GET /api/indicators`
+  - `GET /api/fred_raw`
+  - `GET /api/indeed_raw`
+  - `POST /api/refresh` (token-protected, optional)
+- **Frontend:** reads from `/api/*` (no `site/data/*.json`)
+- **Charts:** Chart.js (client-side)
+
+**Motivation:** deploy once; Cloudflare continuously refreshes data without relying on a VPS.
+
+### Source code
+- GitHub repo: `simonhimself/displacement-index`
+- Primary deployment branch: `cf-deployment`
 
 ## Design Direction (V1 Editorial — chosen Feb 23)
 
@@ -134,7 +147,8 @@ We track 5 links in a macro chain. Each link has 2-4 indicators. Each indicator 
 - [x] Name: **The Displacement Index** (displacementindex.com)
 - [x] X strategy: post from @simonhimself
 - [x] Newsletter: v2 (not MVP)
-- [ ] Design direction: dark/terminal aesthetic (proposed, pending confirm)
-- [ ] Voice/brand personality
-- [ ] Legal disclaimer wording
-- [ ] Domain purchase
+- [x] Design direction: V1 Editorial (light/warm, media-credible)
+- [x] Voice: clinical observer (site), provocative angle lives in Simon’s X posts
+- [x] Repo: public (GitHub)
+- [x] Deployment: Cloudflare Workers + Static Assets + Cron + KV (self-updating)
+- [ ] Domain purchase + custom domain routing
