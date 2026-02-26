@@ -3,9 +3,10 @@
  * Reads indicators.json + fred_raw.json and renders the dashboard.
  */
 
-const DATA_PATH = 'data/indicators.json';
-const FRED_PATH = 'data/fred_raw.json';
-const INDEED_PATH = 'data/indeed_raw.json';
+// Data is served by the Worker API (cron-refreshed + stored in KV)
+const DATA_PATH = '/api/indicators';
+const FRED_PATH = '/api/fred_raw';
+const INDEED_PATH = '/api/indeed_raw';
 
 // Chain link metadata (static)
 const CHAIN_LINKS = {

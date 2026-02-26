@@ -1,0 +1,25 @@
+{
+  "name": "displacement-index",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-02-26",
+  "assets": {
+    "directory": "./site",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "html_handling": "auto-trailing-slash",
+    "run_worker_first": ["/api/*"]
+  },
+  "kv_namespaces": [
+    {
+      "binding": "DI_KV",
+      "id": "__KV_ID__",
+      "preview_id": "__KV_PREVIEW_ID__"
+    }
+  ],
+  "vars": {
+    "DATA_VERSION": "v1"
+  },
+  "triggers": {
+    "crons": ["0 */6 * * *"]
+  }
+}

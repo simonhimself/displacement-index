@@ -32,14 +32,23 @@
 - [x] Design mockups — V1 Editorial chosen (v1-editorial.html)
 - [x] frontend-design + cloudflare skills added to agent config
 - [~] **Production site build (V1 Editorial → real site)**
-  - [ ] Set up project structure (static site, build system)
-  - [ ] Wire data pipeline JSON → dynamic HTML rendering
-  - [ ] Add interactive charts (Chart.js) per indicator
+  - [x] Set up project structure (static site)
+  - [x] Wire pipeline JSON → dynamic HTML rendering
+  - [x] Add interactive charts (Chart.js) per indicator
   - [ ] Add time series sparklines in chain overview
   - [ ] Methodology/about page
-  - [ ] Disclaimer footer
-  - [ ] Mobile responsive polish
-  - [ ] OG meta tags for social sharing
+  - [x] Disclaimer footer (basic)
+  - [x] Mobile responsive polish
+  - [x] OG meta tags (basic)
+
+- [~] **Cloudflare self-updating deployment (Workers + Static Assets + Cron + KV)**
+  - [x] Create `wrangler.jsonc` + Worker scaffold (`src/worker.ts`) on branch `cf-deployment`
+  - [x] Switch frontend to fetch from `/api/*` instead of `site/data/*.json`
+  - [ ] Create KV namespace + wire IDs into `wrangler.jsonc`
+  - [ ] Set Worker secrets: `FRED_API_KEY` (+ optional `REFRESH_TOKEN`)
+  - [ ] `wrangler deploy`
+  - [ ] Verify cron refresh populates KV and `/api/health` shows last_updated
+  - [ ] Configure GitHub ↔ Cloudflare deploy on push
 - [ ] GitHub repo setup (public)
 - [ ] Cloudflare Pages deploy
 
