@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup: Chain Link Tooltips</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F4F1EB;
+    --surface: #FFFEF9;
+    --text: #1C1917;
+    --text-secondary: #78716C;
+    --text-tertiary: #A8A29E;
+    --border: #D6D3CD;
+    --border-light: #E7E5DF;
+    --accent: #B45309;
+    --normal-bg: #F0FDF4;
+    --normal-text: #166534;
+    --normal-dot: #22C55E;
+    --warning-bg: #FFF7ED;
+    --warning-text: #9A3412;
+    --warning-dot: #F97316;
+  }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3rem;
+  }
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 0.5rem;
+  }
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 1.4rem;
+    margin-bottom: 0.3rem;
+  }
+  .note {
+    max-width: 520px;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    line-height: 1.6;
+    font-style: italic;
+    margin-bottom: 1rem;
+  }
+  hr {
+    width: 100%;
+    max-width: 700px;
+    border: none;
+    border-top: 1px dashed var(--border);
+  }
+
+  /* ---- Chain card (matches prod) ---- */
+  .chain-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    max-width: 700px;
+    width: 100%;
+  }
+  .chain-item {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    padding: 1.1rem 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: help;
+    position: relative;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .chain-item:hover {
+    border-color: rgba(180, 83, 9, 0.35);
+    box-shadow: 0 2px 12px rgba(28, 25, 23, 0.06);
+  }
+  .chain-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--bg);
+    display: grid;
+    place-items: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+  .chain-info { flex: 1; }
+  .chain-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .chain-name .i-icon {
+    width: 15px;
+    height: 15px;
+    border-radius: 999px;
+    display: inline-grid;
+    place-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    background: rgba(180, 83, 9, 0.09);
+    border: 1px solid rgba(180, 83, 9, 0.25);
+    color: var(--accent);
+    font-weight: 400;
+  }
+  .chain-sub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.1rem;
+  }
+  .chain-value {
+    text-align: right;
+    min-width: 80px;
+  }
+  .chain-value-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 1.05rem;
+  }
+  .chain-value-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-tertiary);
+  }
+  .pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+  }
+  .pill .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+  .pill-normal { background: var(--normal-bg); color: var(--normal-text); }
+  .pill-normal .dot { background: var(--normal-dot); }
+  .pill-warning { background: var(--warning-bg); color: var(--warning-text); }
+  .pill-warning .dot { background: var(--warning-dot); }
+
+  /* ---- Tooltip popover ---- */
+  .chain-tooltip {
+    position: absolute;
+    z-index: 100;
+    top: calc(100% + 10px);
+    left: 50px;
+    right: 20px;
+    background: #fffdf7;
+    border: 1px solid rgba(214, 211, 205, 0.9);
+    border-radius: 14px;
+    box-shadow: 0 22px 60px rgba(28, 25, 23, 0.14);
+    padding: 1.1rem 1.2rem;
+    opacity: 0;
+    transform: translateY(6px);
+    pointer-events: none;
+    transition: opacity 120ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .chain-item:hover .chain-tooltip,
+  .chain-item.show-tip .chain-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .tip-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
+  }
+  .tip-thesis {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin-bottom: 0.55rem;
+  }
+  .tip-thesis strong { color: var(--text); font-weight: 600; }
+  .tip-chain-context {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 0.65rem 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+  .tip-chain-arrow {
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+  .tip-chain-text {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+  .tip-chain-text strong { color: var(--text); }
+  .tip-source {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-tertiary);
+  }
+
+  /* For mockup: force-show specific tooltips */
+  .show-tip .chain-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="label">Mockup: Chain Link Hover Tooltips</div>
+<h2>Displacement Chain</h2>
+<p class="note">Each chain link now has a thesis-aware tooltip explaining what it measures, why it matters to the displacement thesis, and how it connects to the links before/after it. Hover to preview. Items 1 and 4 are forced-open for review.</p>
+
+<div class="chain-list">
+
+  <!-- ============================================ -->
+  <!-- 1. White-Collar Displacement (FORCED OPEN) -->
+  <!-- ============================================ -->
+  <div class="chain-item show-tip">
+    <div class="chain-num">1</div>
+    <div class="chain-info">
+      <div class="chain-name">White-Collar Displacement <span class="i-icon">i</span></div>
+      <div class="chain-sub">Professional & technical sector unemployment</div>
+    </div>
+    <div class="chain-value">
+      <div class="chain-value-num">4.5%</div>
+      <div class="chain-value-label">Prof/Biz UE</div>
+    </div>
+    <span class="pill pill-normal"><span class="dot"></span> Normal</span>
+
+    <div class="chain-tooltip">
+      <div class="tip-title">Link 1: White-Collar Displacement</div>
+      <div class="tip-thesis">
+        The <strong>first domino</strong>. If AI tools replace knowledge workers faster than the economy can reabsorb them, unemployment in professional and technical sectors will rise before it shows up in headline numbers.
+      </div>
+      <div class="tip-chain-context">
+        <div class="tip-chain-arrow">🔗</div>
+        <div class="tip-chain-text">
+          <strong>Chain position:</strong> This is the trigger. Rising white-collar unemployment → reduced household income → feeds into <strong>Link 2: Consumer Spending</strong>.
+        </div>
+      </div>
+      <div class="tip-source">Sources: BLS (via FRED) · LNU04032239, LNU04032237, CES6054000001</div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- 2. Consumer Spending -->
+  <!-- ============================================ -->
+  <div class="chain-item">
+    <div class="chain-num">2</div>
+    <div class="chain-info">
+      <div class="chain-name">Consumer Spending <span class="i-icon">i</span></div>
+      <div class="chain-sub">Real consumption, sentiment & retail</div>
+    </div>
+    <div class="chain-value">
+      <div class="chain-value-num">56.4</div>
+      <div class="chain-value-label">UMich Sent.</div>
+    </div>
+    <span class="pill pill-normal"><span class="dot"></span> Normal</span>
+
+    <div class="chain-tooltip">
+      <div class="tip-title">Link 2: Consumer Spending</div>
+      <div class="tip-thesis">
+        Displaced workers cut spending. If enough high-income professionals lose jobs or take pay cuts, <strong>aggregate consumer demand falls</strong> — even while headline GDP looks fine (boosted by AI productivity).
+      </div>
+      <div class="tip-chain-context">
+        <div class="tip-chain-arrow">🔗</div>
+        <div class="tip-chain-text">
+          <strong>Chain position:</strong> Fed by <strong>Link 1</strong> (job losses → less income). Feeds into <strong>Link 3: Ghost GDP</strong> (productivity up, spending down = divergence) and <strong>Link 4: Credit Stress</strong> (consumers borrow to cover gaps).
+        </div>
+      </div>
+      <div class="tip-source">Sources: BEA, UMich, Census (via FRED) · PCEC96, UMCSENT, RSAFS</div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- 3. Ghost GDP -->
+  <!-- ============================================ -->
+  <div class="chain-item">
+    <div class="chain-num">3</div>
+    <div class="chain-info">
+      <div class="chain-name">Ghost GDP <span class="i-icon">i</span></div>
+      <div class="chain-sub">Productivity vs wage growth divergence</div>
+    </div>
+    <div class="chain-value">
+      <div class="chain-value-num">+0.57</div>
+      <div class="chain-value-label">Ghost Score</div>
+    </div>
+    <span class="pill pill-normal"><span class="dot"></span> Normal</span>
+
+    <div class="chain-tooltip">
+      <div class="tip-title">Link 3: Ghost GDP</div>
+      <div class="tip-thesis">
+        The <strong>smoke signal</strong>. AI makes companies more productive, but if those gains flow to shareholders instead of workers, GDP grows while real wages stagnate. The economy looks healthy on paper while households fall behind.
+      </div>
+      <div class="tip-chain-context">
+        <div class="tip-chain-arrow">🔗</div>
+        <div class="tip-chain-text">
+          <strong>Chain position:</strong> Confirms the mechanism. If <strong>Link 1</strong> fires (displacement) and <strong>Link 2</strong> softens (spending), a growing Ghost GDP gap confirms the productivity gains aren't reaching workers. Amplifies pressure on <strong>Link 4: Credit Stress</strong>.
+        </div>
+      </div>
+      <div class="tip-source">Sources: BLS (via FRED) · OPHNFB, LES1252881600Q, M2V</div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- 4. Credit Stress (FORCED OPEN) -->
+  <!-- ============================================ -->
+  <div class="chain-item show-tip">
+    <div class="chain-num">4</div>
+    <div class="chain-info">
+      <div class="chain-name">Credit Stress <span class="i-icon">i</span></div>
+      <div class="chain-sub">High-yield spreads & delinquencies</div>
+    </div>
+    <div class="chain-value">
+      <div class="chain-value-num">2.94%</div>
+      <div class="chain-value-label">HY OAS</div>
+    </div>
+    <span class="pill pill-warning"><span class="dot"></span> Warning</span>
+
+    <div class="chain-tooltip">
+      <div class="tip-title">Link 4: Credit Stress</div>
+      <div class="tip-thesis">
+        The <strong>amplifier</strong>. When displaced workers can't find equivalent jobs, they turn to credit. When enough borrowers struggle, credit markets price in the risk — spreads widen, delinquencies rise, lending tightens, and the pain cascades.
+      </div>
+      <div class="tip-chain-context">
+        <div class="tip-chain-arrow">🔗</div>
+        <div class="tip-chain-text">
+          <strong>Chain position:</strong> Downstream from <strong>Links 1–3</strong>. Currently at <strong>Warning</strong> — the only active signal. If this persists while employment weakens, it feeds into <strong>Link 5: Mortgage Stress</strong>, the final and most systemically dangerous link.
+        </div>
+      </div>
+      <div class="tip-source">Sources: ICE BofA, FDIC (via FRED) · BAMLH0A0HYM2, BAMLH0A3HYC, DRCLACBS</div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- 5. Mortgage Stress -->
+  <!-- ============================================ -->
+  <div class="chain-item">
+    <div class="chain-num">5</div>
+    <div class="chain-info">
+      <div class="chain-name">Mortgage Stress <span class="i-icon">i</span></div>
+      <div class="chain-sub">Residential mortgage delinquencies</div>
+    </div>
+    <div class="chain-value">
+      <div class="chain-value-num">1.78%</div>
+      <div class="chain-value-label">Delinq. Rate</div>
+    </div>
+    <span class="pill pill-normal"><span class="dot"></span> Normal</span>
+
+    <div class="chain-tooltip">
+      <div class="tip-title">Link 5: Mortgage & Housing Stress</div>
+      <div class="tip-thesis">
+        The <strong>final link</strong>. Mortgage delinquencies are the slowest-moving indicator — they lag displacement by 12–18 months. By the time this link activates, the chain has been firing for a while and the damage is structural, not cyclical.
+      </div>
+      <div class="tip-chain-context">
+        <div class="tip-chain-arrow">🔗</div>
+        <div class="tip-chain-text">
+          <strong>Chain position:</strong> The end of the chain. Only fires after sustained stress in <strong>Links 1–4</strong>. Activation here would be the clearest signal that AI displacement has become a systemic economic event.
+        </div>
+      </div>
+      <div class="tip-source">Sources: FDIC (via FRED) · DRSFRMACBS</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="note" style="margin-top: 2rem;">
+  Links 1 and 4 are forced open for review.<br>
+  In production: hover to preview, click to pin, Esc to dismiss (same V1 tooltip system).<br>
+  Each tooltip explains: what the link measures, why it matters to the thesis, and its position in the chain.
+</p>
+
+</body>
+</html>
