@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Displacement Index — Tooltip Draft V3 (Inline Inspector)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,800;0,9..144,900&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F4F1EB;
+    --surface: #FFFEF9;
+    --text: #1C1917;
+    --text-secondary: #78716C;
+    --text-tertiary: #A8A29E;
+    --border: #D6D3CD;
+    --border-light: #E7E5DF;
+    --accent: #B45309;
+
+    --normal-bg: #F0FDF4;
+    --normal-text: #166534;
+    --normal-dot: #22C55E;
+    --elevated-bg: #FFFBEB;
+    --elevated-text: #92400E;
+    --elevated-dot: #F59E0B;
+    --warning-bg: #FFF7ED;
+    --warning-text: #9A3412;
+    --warning-dot: #F97316;
+    --critical-bg: #FEF2F2;
+    --critical-text: #991B1B;
+    --critical-dot: #EF4444;
+
+    --shadow: 0 24px 80px rgba(28, 25, 23, 0.16), 0 4px 16px rgba(28, 25, 23, 0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.55;
+  }
+
+  .wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    letter-spacing: -0.045em;
+    line-height: 1.04;
+    font-size: 2.8rem;
+    margin-bottom: 0.75rem;
+    max-width: 780px;
+  }
+
+  p.lede {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    max-width: 680px;
+    margin-bottom: 2.5rem;
+    line-height: 1.7;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .card-head {
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .card-head h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 100px;
+  }
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .badge-normal { background: var(--normal-bg); color: var(--normal-text); }
+  .badge-normal .badge-dot { background: var(--normal-dot); }
+  .badge-elevated { background: var(--elevated-bg); color: var(--elevated-text); }
+  .badge-elevated .badge-dot { background: var(--elevated-dot); }
+  .badge-warning { background: var(--warning-bg); color: var(--warning-text); }
+  .badge-warning .badge-dot { background: var(--warning-dot); }
+  .badge-critical { background: var(--critical-bg); color: var(--critical-text); }
+  .badge-critical .badge-dot { background: var(--critical-dot); }
+
+  .card-body { padding: 0; }
+
+  /* ---- Metric rows ---- */
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.75rem;
+    padding: 0.7rem 1.25rem;
+    border-top: 1px solid var(--border-light);
+    align-items: center;
+    cursor: help;
+    transition: background 100ms ease;
+  }
+  .row:first-child { border-top: none; }
+  .row:hover { background: rgba(0,0,0,0.018); }
+
+  .row .name {
+    font-size: 0.88rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .row .i {
+    width: 15px;
+    height: 15px;
+    border-radius: 999px;
+    display: inline-grid;
+    place-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    background: rgba(180, 83, 9, 0.08);
+    border: 1px solid rgba(180, 83, 9, 0.22);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .row .series {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-tertiary);
+  }
+  .row .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 0.88rem;
+  }
+
+  /* ---- Popover (V2 inspector design, floating) ---- */
+  .popover {
+    position: fixed;
+    z-index: 9999;
+    width: min(400px, calc(100vw - 28px));
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 140ms ease, transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+  }
+  .popover.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .pop-head {
+    padding: 0.85rem 1.1rem 0.7rem;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+  .pop-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .pop-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 1.05rem;
+    letter-spacing: -0.03em;
+    margin-top: 0.15rem;
+  }
+  .pop-series {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .pop-body {
+    padding: 0.85rem 1.1rem;
+  }
+  .pop-body p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  .pop-kv {
+    padding: 0 1.1rem 0.85rem;
+    display: grid;
+    gap: 0.4rem;
+  }
+  .kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    background: rgba(0,0,0,0.015);
+  }
+  .kv-label {
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.6rem;
+  }
+  .kv-value {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .pop-footer {
+    border-top: 1px solid var(--border-light);
+    padding: 0.6rem 1.1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-tertiary);
+  }
+  .pop-btn {
+    border: 1px solid rgba(180, 83, 9, 0.28);
+    background: rgba(180, 83, 9, 0.06);
+    color: var(--accent);
+    padding: 0.3rem 0.55rem;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    cursor: pointer;
+    transition: background 100ms;
+  }
+  .pop-btn:hover { background: rgba(180, 83, 9, 0.12); }
+
+  @media (max-width: 820px) {
+    .grid { grid-template-columns: 1fr; }
+    h1 { font-size: 2.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="eyebrow">Draft UI pattern · V3</div>
+  <h1>Inline tooltips with inspector-style popover</h1>
+  <p class="lede">V1's inline trigger (dotted underline + <code>i</code> glyph) combined with V2's rich inspector card (definition, source, cadence, interpretation, status). Click to pin; Esc or click-away to dismiss.</p>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <h2>Credit Stress</h2>
+        <span class="badge badge-warning"><span class="badge-dot"></span> Warning</span>
+      </div>
+      <div class="card-body">
+        <div class="row" data-title="High Yield OAS" data-series="BAMLH0A0HYM2" data-status="warning" data-body="Option-Adjusted Spread (OAS) measures extra yield investors demand over Treasuries. Rising spreads imply increasing perceived default risk and tighter financial conditions." data-source="FRED / ICE BofA" data-cadence="Daily" data-interpretation="Higher is worse">
+          <div class="name">HY Credit Spreads <span class="i">i</span></div>
+          <div class="series">BAMLH0A0HYM2</div>
+          <div class="val">2.97%</div>
+        </div>
+
+        <div class="row" data-title="CCC & Lower OAS" data-series="BAMLH0A3HYC" data-status="critical" data-body="Lower-quality credit tends to move first. A widening CCC spread can signal stress in the weakest borrowers even if broader markets appear stable." data-source="FRED / ICE BofA" data-cadence="Daily" data-interpretation="Higher is worse">
+          <div class="name">CCC & Lower Spreads <span class="i">i</span></div>
+          <div class="series">BAMLH0A3HYC</div>
+          <div class="val">9.15%</div>
+        </div>
+
+        <div class="row" data-title="Consumer Loan Delinquency" data-series="DRCLACBS" data-status="elevated" data-body="Share of consumer loans at commercial banks that are delinquent. A slow-moving indicator that often lags credit spreads, but confirms stress once it rises." data-source="FRED / FDIC" data-cadence="Quarterly" data-interpretation="Higher is worse">
+          <div class="name">Consumer Loan Delinq. <span class="i">i</span></div>
+          <div class="series">DRCLACBS</div>
+          <div class="val">2.62%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Consumer Spending</h2>
+        <span class="badge badge-normal"><span class="badge-dot"></span> Normal</span>
+      </div>
+      <div class="card-body">
+        <div class="row" data-title="Real Personal Consumption" data-series="PCEC96" data-status="normal" data-body="Total goods and services purchased by households, adjusted for inflation. The broadest measure of consumer spending power. Declining PCE would signal reduced economic activity at the household level." data-source="FRED / BEA" data-cadence="Monthly" data-interpretation="Lower is worse">
+          <div class="name">Real PCE <span class="i">i</span></div>
+          <div class="series">PCEC96</div>
+          <div class="val">$16.7T</div>
+        </div>
+
+        <div class="row" data-title="Consumer Sentiment" data-series="UMCSENT" data-status="warning" data-body="University of Michigan survey of household expectations about personal finances and business conditions. Often a leading indicator — sentiment can fall well before actual spending declines." data-source="FRED / UMich" data-cadence="Monthly" data-interpretation="Lower is worse">
+          <div class="name">Consumer Sentiment <span class="i">i</span></div>
+          <div class="series">UMCSENT</div>
+          <div class="val">56.4</div>
+        </div>
+
+        <div class="row" data-title="Retail Sales" data-series="RSAFS" data-status="normal" data-body="Advance monthly estimate of total retail and food services sales. A direct measure of consumer spending on goods. Nominal (not inflation-adjusted)." data-source="FRED / Census" data-cadence="Monthly" data-interpretation="Lower is worse">
+          <div class="name">Retail Sales <span class="i">i</span></div>
+          <div class="series">RSAFS</div>
+          <div class="val">$735B</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Ghost GDP</h2>
+        <span class="badge badge-normal"><span class="badge-dot"></span> Normal</span>
+      </div>
+      <div class="card-body">
+        <div class="row" data-title="Ghost GDP Score" data-series="OPHNFB − LES1252881600Q" data-status="normal" data-body="Productivity growth (output/hour) minus real wage growth. A positive gap means economic output is rising faster than what workers receive. A persistent, widening gap is the 'Ghost GDP' signal." data-source="FRED / BLS" data-cadence="Quarterly" data-interpretation="Higher = more 'ghost'">
+          <div class="name">The Gap <span class="i">i</span></div>
+          <div class="series">Derived</div>
+          <div class="val">+0.57</div>
+        </div>
+
+        <div class="row" data-title="M2 Money Velocity" data-series="M2V" data-status="normal" data-body="How many times a dollar circulates through the economy per quarter. Falling velocity means money is being saved or hoarded rather than spent — output isn't reaching the real economy." data-source="FRED / St. Louis Fed" data-cadence="Quarterly" data-interpretation="Lower is worse">
+          <div class="name">M2 Velocity <span class="i">i</span></div>
+          <div class="series">M2V</div>
+          <div class="val">1.39</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>Job Postings</h2>
+        <span class="badge badge-elevated"><span class="badge-dot"></span> Elevated</span>
+      </div>
+      <div class="card-body">
+        <div class="row" data-title="Software Development Postings" data-series="Indeed Hiring Lab" data-status="elevated" data-body="Job postings index for software development roles, relative to Feb 2020 baseline (100). A value below 100 means fewer postings than pre-pandemic. This sector is most exposed to AI-driven code generation tools." data-source="Indeed Hiring Lab (CC-BY-4.0)" data-cadence="Daily" data-interpretation="Lower suggests weaker hiring demand">
+          <div class="name">Software Dev <span class="i">i</span></div>
+          <div class="series">Indeed</div>
+          <div class="val">71</div>
+        </div>
+
+        <div class="row" data-title="Media & Communications Postings" data-series="Indeed Hiring Lab" data-status="warning" data-body="Job postings for media, journalism, and communications roles. One of the most impacted white-collar categories — down 35% from pre-pandemic baseline." data-source="Indeed Hiring Lab (CC-BY-4.0)" data-cadence="Daily" data-interpretation="Lower suggests weaker hiring demand">
+          <div class="name">Media & Comms <span class="i">i</span></div>
+          <div class="series">Indeed</div>
+          <div class="val">65</div>
+        </div>
+
+        <div class="row" data-title="Marketing Postings" data-series="Indeed Hiring Lab" data-status="elevated" data-body="Job postings for marketing roles. Marketing work is increasingly automatable via AI content generation, potentially reducing demand for junior and mid-level positions." data-source="Indeed Hiring Lab (CC-BY-4.0)" data-cadence="Daily" data-interpretation="Lower suggests weaker hiring demand">
+          <div class="name">Marketing <span class="i">i</span></div>
+          <div class="series">Indeed</div>
+          <div class="val">74</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Popover -->
+<div id="popover" class="popover" role="dialog" aria-label="Metric definition">
+  <div class="pop-head">
+    <div>
+      <div class="pop-tag">Definition</div>
+      <div class="pop-title" id="popTitle">—</div>
+    </div>
+    <div class="pop-series" id="popSeries">—</div>
+  </div>
+  <div class="pop-body">
+    <p id="popBody">—</p>
+  </div>
+  <div class="pop-kv">
+    <div class="kv"><span class="kv-label">Source</span><span class="kv-value" id="popSource">—</span></div>
+    <div class="kv"><span class="kv-label">Cadence</span><span class="kv-value" id="popCadence">—</span></div>
+    <div class="kv"><span class="kv-label">Interpretation</span><span class="kv-value" id="popInterpretation">—</span></div>
+    <div class="kv"><span class="kv-label">Status</span><span class="kv-value" id="popStatus">—</span></div>
+  </div>
+  <div class="pop-footer">
+    <span>Click row to pin · Esc to close</span>
+    <button class="pop-btn" id="pinBtn" type="button">Pin</button>
+  </div>
+</div>
+
+<script>
+  const pop = document.getElementById('popover');
+  const popTitle = document.getElementById('popTitle');
+  const popSeries = document.getElementById('popSeries');
+  const popBody = document.getElementById('popBody');
+  const popSource = document.getElementById('popSource');
+  const popCadence = document.getElementById('popCadence');
+  const popInterpretation = document.getElementById('popInterpretation');
+  const popStatus = document.getElementById('popStatus');
+  const pinBtn = document.getElementById('pinBtn');
+
+  const statusColors = {
+    normal: { color: 'var(--normal-text)' },
+    elevated: { color: 'var(--elevated-text)' },
+    warning: { color: 'var(--warning-text)' },
+    critical: { color: 'var(--critical-text)' },
+  };
+
+  let pinned = false;
+  let lastEl = null;
+
+  function showFor(el) {
+    lastEl = el;
+    const d = el.dataset;
+    const status = (d.status || 'normal').toLowerCase();
+
+    popTitle.textContent = d.title || '—';
+    popSeries.textContent = d.series || '—';
+    popBody.textContent = d.body || '';
+    popSource.textContent = d.source || '—';
+    popCadence.textContent = d.cadence || '—';
+    popInterpretation.textContent = d.interpretation || '—';
+    popStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    popStatus.style.color = statusColors[status]?.color || 'var(--text)';
+
+    // Position below the row, aligned left
+    const r = el.getBoundingClientRect();
+    const margin = 14;
+    const popW = 400;
+
+    let left = r.left;
+    if (left + popW > window.innerWidth - margin) left = window.innerWidth - popW - margin;
+    if (left < margin) left = margin;
+
+    let top = r.bottom + 8;
+    // If too low, show above
+    if (top + 340 > window.innerHeight) {
+      top = r.top - 8;
+      pop.style.transform = '';
+      // We'll position the bottom of the popover at `top`
+      pop.style.top = 'auto';
+      pop.style.bottom = (window.innerHeight - top) + 'px';
+      pop.style.left = left + 'px';
+    } else {
+      pop.style.bottom = 'auto';
+      pop.style.top = top + 'px';
+      pop.style.left = left + 'px';
+    }
+
+    pop.classList.add('show');
+    pinBtn.textContent = pinned ? 'Pinned' : 'Pin';
+  }
+
+  function hide() {
+    pinned = false;
+    pop.classList.remove('show');
+    pinBtn.textContent = 'Pin';
+  }
+
+  document.querySelectorAll('.row[data-title]').forEach((row) => {
+    row.addEventListener('mouseenter', () => { if (!pinned) showFor(row); });
+    row.addEventListener('mouseleave', () => { if (!pinned) pop.classList.remove('show'); });
+
+    row.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (pinned && lastEl === row) { hide(); return; }
+      pinned = true;
+      showFor(row);
+    });
+  });
+
+  pinBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (pinned) { hide(); } else { pinned = true; pinBtn.textContent = 'Pinned'; }
+  });
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
+  document.addEventListener('click', (e) => {
+    if (!pinned) return;
+    if (pop.contains(e.target)) return;
+    if (e.target.closest('.row[data-title]')) return;
+    hide();
+  });
+
+  window.addEventListener('scroll', () => { if (lastEl && pop.classList.contains('show')) showFor(lastEl); }, { passive: true });
+  window.addEventListener('resize', () => { if (lastEl && pop.classList.contains('show')) showFor(lastEl); });
+</script>
+</body>
+</html>

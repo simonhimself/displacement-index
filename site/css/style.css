@@ -626,6 +626,97 @@ footer {
 }
 footer a { color: var(--text-secondary); text-decoration: none; }
 
+/* ---- TOOLTIPS (V1 inline) ---- */
+.tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: help;
+  border-bottom: 1px dotted rgba(180, 83, 9, 0.55);
+  padding-bottom: 1px;
+}
+.tip .i {
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  background: rgba(180, 83, 9, 0.09);
+  border: 1px solid rgba(180, 83, 9, 0.25);
+  color: var(--accent);
+  transform: translateY(-1px);
+  flex: 0 0 auto;
+}
+.tip:focus-visible {
+  outline: 2px solid rgba(180, 83, 9, 0.55);
+  outline-offset: 3px;
+  border-bottom-color: transparent;
+  border-radius: 6px;
+}
+
+.popover {
+  position: fixed;
+  z-index: 9999;
+  width: min(420px, calc(100vw - 32px));
+  background: #fffdf7;
+  border: 1px solid rgba(214, 211, 205, 0.9);
+  border-radius: 14px;
+  box-shadow: 0 22px 60px rgba(28, 25, 23, 0.14);
+  padding: 0.95rem 1rem;
+  color: var(--text);
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.popover.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.pop-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+.pop-body {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+.pop-source {
+  margin-top: 0.35rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--text-tertiary);
+}
+.pop-footer {
+  margin-top: 0.65rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  color: var(--text-tertiary);
+}
+.pop-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-light);
+  background: rgba(0,0,0,0.02);
+}
+.pop-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+
 /* ---- LOADING ---- */
 .loading-shimmer {
   background: linear-gradient(90deg, var(--border-light) 25%, var(--bg) 50%, var(--border-light) 75%);

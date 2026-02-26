@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Displacement Index — Tooltip Draft (Inline)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,800;0,9..144,900&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F4F1EB;
+    --surface: #FFFEF9;
+    --text: #1C1917;
+    --text-secondary: #78716C;
+    --text-tertiary: #A8A29E;
+    --border: #D6D3CD;
+    --border-light: #E7E5DF;
+    --accent: #B45309;
+
+    --normal-bg: #F0FDF4;
+    --normal-text: #166534;
+    --normal-dot: #22C55E;
+    --elevated-bg: #FFFBEB;
+    --elevated-text: #92400E;
+    --elevated-dot: #F59E0B;
+    --warning-bg: #FFF7ED;
+    --warning-text: #9A3412;
+    --warning-dot: #F97316;
+    --critical-bg: #FEF2F2;
+    --critical-text: #991B1B;
+    --critical-dot: #EF4444;
+
+    --shadow: 0 22px 60px rgba(28, 25, 23, 0.14);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 3.5rem 2rem;
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    letter-spacing: -0.045em;
+    line-height: 1.04;
+    font-size: 3.1rem;
+    margin: 0 0 1rem;
+    max-width: 780px;
+  }
+
+  p.lede {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+    max-width: 720px;
+    margin: 0 0 2.25rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem 1.25rem 1.1rem;
+  }
+
+  .card h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.2rem;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    margin: 0 0 0.75rem;
+  }
+
+  .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 0.75rem;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    padding: 0.65rem 0;
+    border-top: 1px solid var(--border-light);
+    align-items: baseline;
+  }
+  .row:first-of-type { border-top: none; }
+
+  .label {
+    font-size: 0.92rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 0.92rem;
+    color: var(--text);
+  }
+
+  /* ----- Tooltip trigger: subtle, editorial ----- */
+  .tip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: help;
+    border-bottom: 1px dotted rgba(180, 83, 9, 0.55);
+    padding-bottom: 1px;
+  }
+
+  .tip .i {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    display: inline-grid;
+    place-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    background: rgba(180, 83, 9, 0.09);
+    border: 1px solid rgba(180, 83, 9, 0.25);
+    color: var(--accent);
+    transform: translateY(-1px);
+    flex: 0 0 auto;
+  }
+
+  /* ----- Floating tooltip panel ----- */
+  .popover {
+    position: fixed;
+    z-index: 9999;
+    width: min(420px, calc(100vw - 32px));
+    background: #fffdf7;
+    border: 1px solid rgba(214, 211, 205, 0.9);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 0.95rem 1rem;
+    color: var(--text);
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity 120ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .popover.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .pop-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+  }
+  .pop-body {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+
+  .pop-footer {
+    margin-top: 0.65rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.18rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-light);
+    background: rgba(0,0,0,0.02);
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--normal-dot); }
+
+  .kbd {
+    border: 1px solid rgba(214, 211, 205, 0.9);
+    background: rgba(255,255,255,0.7);
+    padding: 0.1rem 0.35rem;
+    border-radius: 8px;
+  }
+
+  /* Accessibility: focus states */
+  .tip:focus-visible {
+    outline: 2px solid rgba(180, 83, 9, 0.55);
+    outline-offset: 3px;
+    border-bottom-color: transparent;
+    border-radius: 6px;
+  }
+
+  @media (max-width: 820px) {
+    .grid { grid-template-columns: 1fr; }
+    h1 { font-size: 2.35rem; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="eyebrow">Draft UI pattern</div>
+    <h1>Hover explanations that feel like footnotes — not tooltips</h1>
+    <p class="lede">This draft keeps the site clinical. Explanations appear as compact “editorial footnotes”: dotted underline, a small info glyph, and a restrained popover that can be pinned with click.</p>
+
+    <div class="grid">
+      <div class="card">
+        <div class="meta">Chain Link</div>
+        <h2>Credit Stress</h2>
+
+        <div class="row">
+          <div class="label">
+            <span class="tip" tabindex="0" data-title="High Yield OAS" data-series="BAMLH0A0HYM2" data-status="warning" data-body="Option-Adjusted Spread (OAS) measures extra yield investors demand over Treasuries. Rising spreads imply increasing perceived default risk and tighter financial conditions.">
+              HY Credit Spreads <span class="i">i</span>
+            </span>
+          </div>
+          <div class="value">2.97%</div>
+        </div>
+
+        <div class="row">
+          <div class="label">
+            <span class="tip" tabindex="0" data-title="CCC & Lower OAS" data-series="BAMLH0A3HYC" data-status="critical" data-body="Lower-quality credit tends to move first. A widening CCC spread can signal stress in the weakest borrowers even if broader markets appear stable.">
+              CCC & Lower Spreads <span class="i">i</span>
+            </span>
+          </div>
+          <div class="value">9.15%</div>
+        </div>
+
+        <div class="row">
+          <div class="label">
+            <span class="tip" tabindex="0" data-title="Consumer Loan Delinquency" data-series="DRCLACBS" data-status="elevated" data-body="Share of consumer loans (banks) that are delinquent. A slow-moving indicator; it often lags credit spreads, but confirms stress once it rises.">
+              Consumer Loan Delinq. <span class="i">i</span>
+            </span>
+          </div>
+          <div class="value">2.62%</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="meta">Derived</div>
+        <h2>Ghost GDP</h2>
+
+        <div class="row">
+          <div class="label">
+            <span class="tip" tabindex="0" data-title="Ghost GDP score" data-series="OPHNFB − LES1252881600Q" data-status="normal" data-body="Defined as productivity (output/hour) YoY growth minus real wage YoY growth. A large positive gap suggests output is rising faster than compensation.">
+              The Gap <span class="i">i</span>
+            </span>
+          </div>
+          <div class="value">0.57</div>
+        </div>
+
+        <div class="row">
+          <div class="label">
+            <span class="tip" tabindex="0" data-title="Why z-scores?" data-series="(scoring)" data-status="normal" data-body="Each indicator is normalized against its own 5-year distribution. This makes heterogeneous metrics comparable (percent, index levels, spreads) without implying a prediction model.">
+              Z-score scoring <span class="i">i</span>
+            </span>
+          </div>
+          <div class="value">0–2σ</div>
+        </div>
+
+        <div class="row">
+          <div class="label">
+            <span class="tip" tabindex="0" data-title="Update cadence" data-series="cron: 0 */6 * * *" data-status="normal" data-body="Cloudflare cron refresh runs every 6 hours (UTC). KV is eventually consistent; updates typically propagate globally within ~60 seconds.">
+              Refresh cadence <span class="i">i</span>
+            </span>
+          </div>
+          <div class="value">6h</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="popover" class="popover" role="dialog" aria-live="polite" aria-label="Metric explanation">
+    <div class="pop-title" id="popTitle">—</div>
+    <p class="pop-body" id="popBody">—</p>
+    <div class="pop-footer">
+      <span class="pill"><span class="dot" id="popDot"></span><span id="popStatus">Normal</span></span>
+      <span><span class="kbd">Esc</span> close · click to pin</span>
+    </div>
+  </div>
+
+<script>
+  const pop = document.getElementById('popover');
+  const popTitle = document.getElementById('popTitle');
+  const popBody = document.getElementById('popBody');
+  const popDot = document.getElementById('popDot');
+  const popStatus = document.getElementById('popStatus');
+
+  let pinned = false;
+  let lastTarget = null;
+
+  const statusColor = {
+    normal: getComputedStyle(document.documentElement).getPropertyValue('--normal-dot').trim(),
+    elevated: getComputedStyle(document.documentElement).getPropertyValue('--elevated-dot').trim(),
+    warning: getComputedStyle(document.documentElement).getPropertyValue('--warning-dot').trim(),
+    critical: getComputedStyle(document.documentElement).getPropertyValue('--critical-dot').trim(),
+  };
+
+  function showFor(el) {
+    if (!el) return;
+    lastTarget = el;
+
+    const title = el.dataset.title || 'Metric';
+    const body = el.dataset.body || '';
+    const series = el.dataset.series || '';
+    const status = (el.dataset.status || 'normal').toLowerCase();
+
+    popTitle.textContent = series ? `${title} — ${series}` : title;
+    popBody.textContent = body;
+    popDot.style.background = statusColor[status] || statusColor.normal;
+    popStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+
+    // Position: align left edge with trigger; prefer below; clamp to viewport
+    const r = el.getBoundingClientRect();
+    const margin = 12;
+    const preferredTop = r.bottom + 10;
+
+    pop.style.left = Math.min(Math.max(r.left, margin), window.innerWidth - pop.offsetWidth - margin) + 'px';
+    pop.style.top = Math.min(preferredTop, window.innerHeight - 12 - 220) + 'px';
+
+    pop.classList.add('show');
+  }
+
+  function hide() {
+    pinned = false;
+    pop.classList.remove('show');
+  }
+
+  function onEnter(e) {
+    if (pinned) return;
+    showFor(e.currentTarget);
+  }
+
+  function onLeave() {
+    if (pinned) return;
+    pop.classList.remove('show');
+  }
+
+  function onMove(e) {
+    if (pinned) return;
+    // keep it stable; do nothing on move (intentional)
+  }
+
+  document.querySelectorAll('.tip').forEach((el) => {
+    el.addEventListener('mouseenter', onEnter);
+    el.addEventListener('mouseleave', onLeave);
+    el.addEventListener('mousemove', onMove);
+    el.addEventListener('focus', onEnter);
+    el.addEventListener('blur', onLeave);
+
+    el.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      if (pinned && lastTarget === el) {
+        hide();
+        return;
+      }
+      pinned = true;
+      showFor(el);
+    });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hide();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!pinned) return;
+    if (pop.contains(e.target)) return;
+    if (e.target && e.target.classList && e.target.classList.contains('tip')) return;
+    hide();
+  });
+
+  window.addEventListener('scroll', () => {
+    if (pinned && lastTarget) showFor(lastTarget);
+  }, { passive: true });
+
+  window.addEventListener('resize', () => {
+    if (pinned && lastTarget) showFor(lastTarget);
+  });
+</script>
+</body>
+</html>

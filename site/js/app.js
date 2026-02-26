@@ -87,6 +87,127 @@ const VALUE_FORMATTERS = {
   LES1252881600Q: v => '$' + v.toFixed(0),
 };
 
+// Tooltip definitions — one-liner explanations + source for each metric
+const TOOLTIP_DEFS = {
+  LNU04032239: {
+    title: 'Prof & Business Services Unemployment',
+    body: 'Unemployment rate for professional and business services workers — the sector most directly exposed to AI-driven automation of white-collar tasks.',
+    source: 'FRED / BLS',
+  },
+  LNU04032237: {
+    title: 'Information Industry Unemployment',
+    body: 'Unemployment in information services (tech, media, telecom). Historically volatile but first to reflect structural shifts in knowledge work demand.',
+    source: 'FRED / BLS',
+  },
+  CES6054000001: {
+    title: 'Professional/Scientific/Technical Employment',
+    body: 'Total employees in professional, scientific, and technical services. A declining trend here would confirm displacement beyond just unemployment claims.',
+    source: 'FRED / BLS',
+  },
+  UNRATE: {
+    title: 'Overall Unemployment Rate',
+    body: 'Headline U-3 unemployment. Useful as a baseline — if sector unemployment rises while headline stays flat, it signals displacement rather than recession.',
+    source: 'FRED / BLS',
+  },
+  PCEC96: {
+    title: 'Real Personal Consumption',
+    body: 'Total goods and services purchased by households, adjusted for inflation. The broadest measure of consumer spending power.',
+    source: 'FRED / BEA',
+  },
+  UMCSENT: {
+    title: 'Consumer Sentiment (UMich)',
+    body: 'University of Michigan survey of household expectations. Often a leading indicator — sentiment can fall well before actual spending declines.',
+    source: 'FRED / UMich',
+  },
+  RSAFS: {
+    title: 'Retail Sales',
+    body: 'Advance monthly estimate of total retail and food services sales. A direct, nominal measure of consumer spending on goods.',
+    source: 'FRED / Census',
+  },
+  OPHNFB: {
+    title: 'Nonfarm Business Productivity',
+    body: 'Output per hour in the nonfarm business sector. Rising productivity with stagnant wages is the "Ghost GDP" signal.',
+    source: 'FRED / BLS',
+  },
+  LES1252881600Q: {
+    title: 'Real Median Weekly Earnings',
+    body: 'Inflation-adjusted median weekly earnings for full-time workers. The wage side of the Ghost GDP equation.',
+    source: 'FRED / BLS',
+  },
+  M2V: {
+    title: 'M2 Money Velocity',
+    body: 'How many times a dollar circulates through the economy per quarter. Falling velocity means money is being saved or hoarded rather than spent.',
+    source: 'FRED / St. Louis Fed',
+  },
+  BAMLH0A0HYM2: {
+    title: 'HY Credit Spreads (OAS)',
+    body: 'Option-Adjusted Spread measures extra yield investors demand over Treasuries. Rising spreads imply increasing perceived default risk.',
+    source: 'FRED / ICE BofA',
+  },
+  BAMLH0A3HYC: {
+    title: 'CCC & Lower Spreads',
+    body: 'Lower-quality credit tends to move first. Widening CCC spreads signal stress in the weakest borrowers even if broader markets appear stable.',
+    source: 'FRED / ICE BofA',
+  },
+  DRCLACBS: {
+    title: 'Consumer Loan Delinquency',
+    body: 'Share of consumer loans at commercial banks that are delinquent. Slow-moving but confirms credit stress once it rises.',
+    source: 'FRED / FDIC',
+  },
+  DRSFRMACBS: {
+    title: 'SF Mortgage Delinquency',
+    body: 'Single-family residential mortgage delinquency rate. The final link — would be the last to deteriorate, lagging displacement by 12–18 months.',
+    source: 'FRED / FDIC',
+  },
+  BABATOTALSAUS: {
+    title: 'New Business Applications',
+    body: 'Monthly business applications filed with the IRS. A counter-indicator: rising applications could signal displaced workers creating new businesses.',
+    source: 'FRED / Census',
+  },
+  USCONS: {
+    title: 'Construction Employment',
+    body: 'Total construction sector employment. AI infrastructure (data centers) could boost this sector even as white-collar roles decline.',
+    source: 'FRED / BLS',
+  },
+  JTSJOL: {
+    title: 'Job Openings (JOLTS)',
+    body: 'Total nonfarm job openings. A broad measure of labor demand across the economy.',
+    source: 'FRED / BLS',
+  },
+  // Indeed sectors
+  'indeed:Software Development': {
+    title: 'Software Development Postings',
+    body: 'Job postings index relative to Feb 2020 baseline (100). The sector most exposed to AI code generation tools.',
+    source: 'Indeed Hiring Lab (CC-BY-4.0)',
+  },
+  'indeed:Media & Communications': {
+    title: 'Media & Communications Postings',
+    body: 'Postings for media, journalism, and communications. One of the most impacted white-collar categories.',
+    source: 'Indeed Hiring Lab (CC-BY-4.0)',
+  },
+  'indeed:Marketing': {
+    title: 'Marketing Postings',
+    body: 'Marketing role postings. Increasingly automatable via AI content generation, reducing demand for junior and mid-level positions.',
+    source: 'Indeed Hiring Lab (CC-BY-4.0)',
+  },
+  'indeed:Banking & Finance': {
+    title: 'Banking & Finance Postings',
+    body: 'Financial sector postings. Exposed to AI-driven automation in analysis, compliance, and back-office operations.',
+    source: 'Indeed Hiring Lab (CC-BY-4.0)',
+  },
+  'indeed:Accounting': {
+    title: 'Accounting Postings',
+    body: 'Accounting role postings. Routine bookkeeping and audit tasks are among the most automatable white-collar functions.',
+    source: 'Indeed Hiring Lab (CC-BY-4.0)',
+  },
+  // Derived
+  'ghost_gdp': {
+    title: 'Ghost GDP Score',
+    body: 'Productivity growth minus real wage growth. A persistent positive gap means economic output is rising faster than what workers receive.',
+    source: 'FRED / BLS (derived)',
+  },
+};
+
 // ---- HELPERS ----
 
 function makeBadge(status, size = '') {
@@ -275,9 +396,14 @@ function renderDetailCards(data, fredData) {
       const z = indicator ? indicator.z : null;
       const zStr = z !== null ? (z > 0 ? '+' : '') + z.toFixed(2) : '—';
 
+      const tip = TOOLTIP_DEFS[seriesId];
+      const nameHtml = tip
+        ? `<span class="tip" tabindex="0" data-key="${seriesId}"><span class="name">${INDICATOR_NAMES[seriesId] || seriesId}</span> <span class="i">i</span></span>`
+        : `<span class="name">${INDICATOR_NAMES[seriesId] || seriesId}</span>`;
+
       rows += `
         <tr>
-          <td><span class="name">${INDICATOR_NAMES[seriesId] || seriesId}</span><br><span class="series">${seriesId}</span></td>
+          <td>${nameHtml}<br><span class="series">${seriesId}</span></td>
           <td class="mono">${latestValue}</td>
           <td class="mono">${zStr}</td>
         </tr>`;
@@ -437,9 +563,15 @@ function renderIndeed(indeedData) {
     const diffStr = diff >= 0 ? `+${diff.toFixed(0)}%` : `${diff.toFixed(0)}%`;
     const color = val < 80 ? 'var(--warning-text)' : val < 95 ? 'var(--elevated-text)' : 'var(--normal-text)';
 
+    const tipKey = `indeed:${name}`;
+    const hasTip = TOOLTIP_DEFS[tipKey];
+    const nameEl = hasTip
+      ? `<span class="tip" tabindex="0" data-key="${tipKey}">${name} <span class="i">i</span></span>`
+      : name;
+
     sectorHTML += `
       <div class="indeed-sector-card">
-        <div class="indeed-sector-name">${name}</div>
+        <div class="indeed-sector-name">${nameEl}</div>
         <div class="indeed-sector-value" style="color:${color}">${val.toFixed(0)}</div>
         <div class="indeed-sector-diff" style="color:${color}">${diffStr} vs Feb 2020</div>
       </div>`;
@@ -542,9 +674,14 @@ function renderContext(fredData) {
       }
     }
 
+    const ctxTip = TOOLTIP_DEFS[seriesId];
+    const ctxNameEl = ctxTip
+      ? `<span class="tip" tabindex="0" data-key="${seriesId}">${meta.name} <span class="i">i</span></span>`
+      : meta.name;
+
     cardsHTML += `
       <div class="context-card">
-        <div class="context-card-name">${meta.name}</div>
+        <div class="context-card-name">${ctxNameEl}</div>
         <div class="context-card-value">${meta.fmt(val)}</div>
         <div class="context-card-change">${yoyStr}</div>
         <div class="context-card-series">${seriesId}</div>
@@ -603,4 +740,107 @@ async function init() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+// ---- TOOLTIP SYSTEM (V1 inline) ----
+
+function initTooltips() {
+  const pop = document.getElementById('popover');
+  if (!pop) return;
+
+  const popTitle = document.getElementById('popTitle');
+  const popBody = document.getElementById('popBody');
+  const popSource = document.getElementById('popSource');
+  const popDot = document.getElementById('popDot');
+  const popStatus = document.getElementById('popStatus');
+
+  let pinned = false;
+  let lastTarget = null;
+
+  function showFor(el) {
+    if (!el) return;
+    lastTarget = el;
+
+    const key = el.dataset.key;
+    const def = TOOLTIP_DEFS[key];
+    if (!def) return;
+
+    popTitle.textContent = def.title;
+    popBody.textContent = def.body;
+    popSource.textContent = def.source ? `Source: ${def.source}` : '';
+
+    // Status dot — hidden for tooltips without status context
+    popDot.style.display = 'none';
+    popStatus.textContent = '';
+
+    // Position below trigger, left-aligned, clamped to viewport
+    const r = el.getBoundingClientRect();
+    const margin = 12;
+    const popW = Math.min(420, window.innerWidth - 32);
+    let left = r.left;
+    if (left + popW > window.innerWidth - margin) left = window.innerWidth - popW - margin;
+    if (left < margin) left = margin;
+
+    let top = r.bottom + 10;
+    // If too close to bottom, show above
+    if (top + 200 > window.innerHeight) {
+      top = r.top - 10;
+      pop.style.bottom = (window.innerHeight - top) + 'px';
+      pop.style.top = 'auto';
+    } else {
+      pop.style.top = top + 'px';
+      pop.style.bottom = 'auto';
+    }
+    pop.style.left = left + 'px';
+
+    pop.classList.add('show');
+  }
+
+  function hide() {
+    pinned = false;
+    pop.classList.remove('show');
+  }
+
+  // Delegate events — works for dynamically-rendered tips too
+  document.addEventListener('mouseover', (e) => {
+    const tip = e.target.closest('.tip');
+    if (!tip || pinned) return;
+    showFor(tip);
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    const tip = e.target.closest('.tip');
+    if (!tip || pinned) return;
+    // Check if we're moving to a child of the same tip
+    if (tip.contains(e.relatedTarget)) return;
+    pop.classList.remove('show');
+  });
+
+  document.addEventListener('click', (e) => {
+    const tip = e.target.closest('.tip');
+    if (tip) {
+      e.preventDefault();
+      if (pinned && lastTarget === tip) { hide(); return; }
+      pinned = true;
+      showFor(tip);
+      return;
+    }
+    // Click outside — dismiss if pinned
+    if (pinned && !pop.contains(e.target)) hide();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') hide();
+  });
+
+  window.addEventListener('scroll', () => {
+    if (lastTarget && pop.classList.contains('show')) showFor(lastTarget);
+  }, { passive: true });
+
+  window.addEventListener('resize', () => {
+    if (lastTarget && pop.classList.contains('show')) showFor(lastTarget);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+  initTooltips();
+});

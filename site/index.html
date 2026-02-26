@@ -76,7 +76,7 @@
     <div class="ghost-bars">
       <div class="ghost-bar-row">
         <div class="ghost-bar-meta">
-          <span class="ghost-bar-name">Productivity Growth (YoY)</span>
+          <span class="ghost-bar-name"><span class="tip" tabindex="0" data-key="OPHNFB">Productivity Growth (YoY) <span class="i">i</span></span></span>
           <span class="ghost-bar-value" id="ghost-prod-value" style="color:var(--accent)">—</span>
         </div>
         <div class="ghost-track">
@@ -85,7 +85,7 @@
       </div>
       <div class="ghost-bar-row">
         <div class="ghost-bar-meta">
-          <span class="ghost-bar-name">Real Wage Growth (YoY)</span>
+          <span class="ghost-bar-name"><span class="tip" tabindex="0" data-key="LES1252881600Q">Real Wage Growth (YoY) <span class="i">i</span></span></span>
           <span class="ghost-bar-value" id="ghost-wage-value">—</span>
         </div>
         <div class="ghost-track">
@@ -95,7 +95,7 @@
       <p class="ghost-explainer">When productivity grows but wages don't follow, output appears in GDP but never reaches workers. A persistent and widening gap would signal the emergence of "Ghost GDP" — growth that exists on paper but not in people's lives.</p>
     </div>
     <div class="ghost-gap-card">
-      <div class="ghost-gap-label">The Gap</div>
+      <div class="ghost-gap-label"><span class="tip" tabindex="0" data-key="ghost_gdp">The Gap <span class="i">i</span></span></div>
       <div class="ghost-gap-value" id="ghost-gap-value">—</div>
       <div class="ghost-gap-desc" id="ghost-gap-desc">Loading...</div>
     </div>
@@ -147,6 +147,17 @@
   <span>The Displacement Index · Not financial advice · Data from FRED & BLS</span>
   <span><a href="pages/methodology.html">Methodology</a> · <a href="https://github.com/" target="_blank" rel="noopener">GitHub ↗</a></span>
 </footer>
+
+<!-- Tooltip popover -->
+<div id="popover" class="popover" role="dialog" aria-live="polite" aria-label="Metric explanation">
+  <div class="pop-title" id="popTitle">—</div>
+  <p class="pop-body" id="popBody">—</p>
+  <div class="pop-source" id="popSource"></div>
+  <div class="pop-footer">
+    <span class="pop-pill"><span class="dot" id="popDot"></span><span id="popStatus"></span></span>
+    <span>click to pin · esc to close</span>
+  </div>
+</div>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>

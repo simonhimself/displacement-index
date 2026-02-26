@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Displacement Index — Tooltip Draft (Inspector Rail)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,800;0,9..144,900&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F4F1EB;
+    --surface: #FFFEF9;
+    --text: #1C1917;
+    --text-secondary: #78716C;
+    --text-tertiary: #A8A29E;
+    --border: #D6D3CD;
+    --border-light: #E7E5DF;
+    --accent: #B45309;
+
+    --normal-dot: #22C55E;
+    --elevated-dot: #F59E0B;
+    --warning-dot: #F97316;
+    --critical-dot: #EF4444;
+
+    --shadow: 0 18px 60px rgba(28, 25, 23, 0.12);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2.75rem 2rem;
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 1.25rem;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .panel-head {
+    padding: 1.25rem 1.25rem 1rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 2.2rem;
+    letter-spacing: -0.045em;
+    line-height: 1.06;
+    margin: 0 0 0.6rem;
+  }
+
+  .lede {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    font-size: 0.95rem;
+    max-width: 72ch;
+  }
+
+  .list {
+    padding: 0.5rem 0;
+  }
+
+  .metric {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.75rem;
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid var(--border-light);
+    cursor: default;
+    transition: background 140ms ease;
+  }
+
+  .metric:hover { background: rgba(0,0,0,0.015); }
+
+  .metric:first-child { border-top: none; }
+
+  .metric .name {
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-size: 0.92rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--normal-dot);
+    transform: translateY(1px);
+  }
+
+  .metric .sub {
+    margin-top: 0.22rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+  }
+
+  .metric .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text);
+    text-align: right;
+  }
+
+  /* Inspector rail */
+  .rail {
+    position: sticky;
+    top: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  .rail .panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+  }
+
+  .rail-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    font-size: 1.1rem;
+    margin: 0;
+  }
+
+  .rail-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+  }
+
+  .rail-body {
+    padding: 1rem 1.25rem 1.25rem;
+  }
+
+  .rail-body p {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.75;
+    font-size: 0.9rem;
+  }
+
+  .rail-kv {
+    margin-top: 0.9rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .kv {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: baseline;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    background: rgba(0,0,0,0.02);
+  }
+  .kv span:first-child { color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.62rem; }
+  .kv span:last-child { color: var(--text); }
+
+  .rail-footer {
+    border-top: 1px solid var(--border-light);
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+  }
+
+  .btn {
+    border: 1px solid rgba(180, 83, 9, 0.32);
+    background: rgba(180, 83, 9, 0.08);
+    color: var(--accent);
+    padding: 0.35rem 0.6rem;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    cursor: pointer;
+  }
+  .btn:hover { background: rgba(180, 83, 9, 0.12); }
+
+  @media (max-width: 980px) {
+    .wrap { grid-template-columns: 1fr; }
+    .rail { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="panel">
+    <div class="panel-head">
+      <div class="eyebrow">Draft UI pattern</div>
+      <h1>Inspector rail: explanations are always visible</h1>
+      <p class="lede">Instead of popovers, hovering a metric updates a right-hand “inspector” with the definition, data source, update cadence, and how it should be interpreted. This is calmer and more professional for media.</p>
+    </div>
+
+    <div class="list" aria-label="Metric list">
+      <div class="metric" data-title="High Yield OAS" data-series="BAMLH0A0HYM2" data-status="warning" data-body="Option-Adjusted Spread (OAS) measures extra yield investors demand over Treasuries. Rising spreads imply increasing perceived default risk and tighter financial conditions." data-interpretation="Higher is worse" data-cadence="Daily" data-source="FRED / ICE BofA">
+        <div>
+          <div class="name"><span class="dot" style="background:var(--warning-dot)"></span> HY Credit Spreads</div>
+          <div class="sub">Credit Stress · Daily</div>
+        </div>
+        <div class="val">2.97%</div>
+      </div>
+
+      <div class="metric" data-title="CCC & Lower OAS" data-series="BAMLH0A3HYC" data-status="critical" data-body="Lower-quality credit tends to move first. A widening CCC spread can signal stress in the weakest borrowers even if broader markets appear stable." data-interpretation="Higher is worse" data-cadence="Daily" data-source="FRED / ICE BofA">
+        <div>
+          <div class="name"><span class="dot" style="background:var(--critical-dot)"></span> CCC & Lower Spreads</div>
+          <div class="sub">Credit Stress · Daily</div>
+        </div>
+        <div class="val">9.15%</div>
+      </div>
+
+      <div class="metric" data-title="Consumer Sentiment" data-series="UMCSENT" data-status="warning" data-body="Survey-based measure of household expectations and confidence. Often weakens before spending declines, but can stay low for long periods." data-interpretation="Lower is worse" data-cadence="Monthly" data-source="FRED / UMich">
+        <div>
+          <div class="name"><span class="dot" style="background:var(--warning-dot)"></span> Consumer Sentiment</div>
+          <div class="sub">Consumer Spending · Monthly</div>
+        </div>
+        <div class="val">56.4</div>
+      </div>
+
+      <div class="metric" data-title="Ghost GDP Score" data-series="OPHNFB − LES1252881600Q" data-status="normal" data-body="Defined as productivity (output/hour) YoY growth minus real wage YoY growth. A large positive gap suggests output is rising faster than compensation." data-interpretation="Higher is more 'ghost'" data-cadence="Quarterly" data-source="FRED / BLS">
+        <div>
+          <div class="name"><span class="dot" style="background:var(--normal-dot)"></span> Ghost GDP Score</div>
+          <div class="sub">Ghost GDP · Quarterly</div>
+        </div>
+        <div class="val">0.57</div>
+      </div>
+
+      <div class="metric" data-title="Software Dev postings" data-series="Indeed Hiring Lab" data-status="elevated" data-body="Job postings index relative to Feb 2020 baseline (100). Sector-level postings can diverge sharply from the aggregate.
+" data-interpretation="Lower suggests weaker hiring demand" data-cadence="Daily" data-source="Indeed Hiring Lab (CC-BY-4.0)">
+        <div>
+          <div class="name"><span class="dot" style="background:var(--elevated-dot)"></span> Software Development Postings</div>
+          <div class="sub">Job Postings · Daily</div>
+        </div>
+        <div class="val">71</div>
+      </div>
+    </div>
+  </div>
+
+  <aside class="panel rail" aria-label="Inspector">
+    <div class="panel-head">
+      <div>
+        <div class="rail-tag">Definition</div>
+        <h2 class="rail-title" id="railTitle">Hover a metric</h2>
+      </div>
+      <div class="rail-tag" id="railSeries">—</div>
+    </div>
+
+    <div class="rail-body">
+      <p id="railBody">Move your cursor over an indicator to see what it measures and how to interpret it. This pattern avoids popovers and keeps the page calm.</p>
+
+      <div class="rail-kv">
+        <div class="kv"><span>Source</span><span id="railSource">—</span></div>
+        <div class="kv"><span>Cadence</span><span id="railCadence">—</span></div>
+        <div class="kv"><span>Interpretation</span><span id="railInterpretation">—</span></div>
+        <div class="kv"><span>Status</span><span id="railStatus">—</span></div>
+      </div>
+    </div>
+
+    <div class="rail-footer">
+      <span>Tip: works on mobile via tap</span>
+      <button class="btn" id="pinBtn" type="button">Pin</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const railTitle = document.getElementById('railTitle');
+  const railSeries = document.getElementById('railSeries');
+  const railBody = document.getElementById('railBody');
+  const railSource = document.getElementById('railSource');
+  const railCadence = document.getElementById('railCadence');
+  const railInterpretation = document.getElementById('railInterpretation');
+  const railStatus = document.getElementById('railStatus');
+  const pinBtn = document.getElementById('pinBtn');
+
+  const statusDot = {
+    normal: 'var(--normal-dot)',
+    elevated: 'var(--elevated-dot)',
+    warning: 'var(--warning-dot)',
+    critical: 'var(--critical-dot)'
+  };
+
+  let pinned = false;
+
+  function apply(el) {
+    const title = el.dataset.title || '—';
+    const series = el.dataset.series || '—';
+    const body = el.dataset.body || '';
+    const src = el.dataset.source || '—';
+    const cadence = el.dataset.cadence || '—';
+    const interp = el.dataset.interpretation || '—';
+    const status = (el.dataset.status || 'normal').toLowerCase();
+
+    railTitle.textContent = title;
+    railSeries.textContent = series;
+    railBody.textContent = body;
+    railSource.textContent = src;
+    railCadence.textContent = cadence;
+    railInterpretation.textContent = interp;
+    railStatus.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    railStatus.style.color = `color-mix(in srgb, var(--text) 15%, ${statusDot[status] || 'var(--normal-dot)'} 85%)`;
+  }
+
+  document.querySelectorAll('.metric').forEach((m) => {
+    m.addEventListener('mouseenter', () => { if (!pinned) apply(m); });
+    m.addEventListener('focus', () => { if (!pinned) apply(m); });
+    m.addEventListener('click', () => { apply(m); pinned = true; pinBtn.textContent = 'Pinned'; });
+    m.tabIndex = 0;
+  });
+
+  pinBtn.addEventListener('click', () => {
+    pinned = !pinned;
+    pinBtn.textContent = pinned ? 'Pinned' : 'Pin';
+  });
+</script>
+</body>
+</html>
