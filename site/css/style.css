@@ -433,6 +433,18 @@ nav {
   border-radius: 16px;
   padding: 1.5rem;
 }
+
+.indeed-chart-wrap {
+  position: relative;
+  height: 190px;
+  margin-top: 1rem;
+}
+
+.indeed-chart-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
 .indeed-agg-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.65rem;
@@ -568,9 +580,15 @@ nav {
   color: var(--text-tertiary);
   margin-bottom: 1rem;
 }
+.chart-wrap {
+  position: relative;
+  height: 200px;
+}
+
 .chart-card canvas {
   width: 100% !important;
-  height: 180px !important;
+  height: 100% !important;
+  display: block;
 }
 
 /* ---- METHODOLOGY ---- */
