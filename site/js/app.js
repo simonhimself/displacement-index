@@ -230,6 +230,27 @@ function formatValue(seriesId, value) {
   return fmt ? fmt(value) : value;
 }
 
+function renderFreshnessBanner(generatedAt) {
+  const banner = document.getElementById('stale-banner');
+  if (!banner || !generatedAt) return;
+
+  const ts = new Date(generatedAt).getTime();
+  if (!Number.isFinite(ts)) return;
+
+  const ageMs = Date.now() - ts;
+  const ageHours = ageMs / (1000 * 60 * 60);
+
+  if (ageHours > 12) {
+    const rounded = ageHours >= 24
+      ? `${(ageHours / 24).toFixed(1)} days`
+      : `${ageHours.toFixed(1)} hours`;
+    banner.textContent = `Data may be stale: last successful refresh was ${rounded} ago (${formatDate(generatedAt)}).`; 
+    banner.hidden = false;
+  } else {
+    banner.hidden = true;
+  }
+}
+
 function statusColor(status) {
   const colors = {
     normal: '#22C55E',
@@ -725,6 +746,7 @@ async function init() {
     }
 
     renderComposite(indicators);
+    renderFreshnessBanner(indicators.generated_at);
     renderChainOverview(indicators);
     populateChainValues(fredData, indicators);
     renderGhostGDP(indicators);

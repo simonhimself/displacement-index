@@ -53,7 +53,69 @@ type IndeedRaw = {
   >;
 };
 
+type RefreshSource = 'cron' | 'manual';
+
+type RefreshContext = {
+  trigger: RefreshSource;
+  runId: string;
+  startedAt: string;
+};
+
+type RefreshSuccess = {
+  version: string;
+  indicators: any;
+  fred: FredRaw;
+  indeed: IndeedRaw;
+  warnings: string[];
+  durationMs: number;
+};
+
+type RefreshResult = {
+  ok: boolean;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+  trigger: RefreshSource;
+  runId: string;
+  startedAt: string;
+  finishedAt: string;
+  durationMs: number;
+  version?: string;
+  warnings?: string[];
+};
+
+type RunLogEntry = {
+  ts: string;
+  ok: boolean;
+  skipped?: boolean;
+  reason?: string;
+  error?: string;
+  trigger: RefreshSource;
+  run_id: string;
+  duration_ms: number;
+  version?: string;
+  warnings_count?: number;
+};
+
 const FRED_BASE = 'https://api.stlouisfed.org/fred/series/observations';
+
+const KV_KEYS = {
+  latestVersion: 'latest:version',
+  lastUpdated: 'meta:last_updated',
+  lastAttempt: 'meta:last_attempt',
+  lastSuccess: 'meta:last_success',
+  lastError: 'meta:last_error',
+  consecutiveFailures: 'meta:consecutive_failures',
+  lastDurationMs: 'meta:last_duration_ms',
+  runLog: 'meta:run_log',
+  refreshLock: 'lock:refresh',
+} as const;
+
+const RUN_LOG_MAX = 50;
+const REFRESH_LOCK_TTL_SEC = 15 * 60;
+
+const DEFAULT_FETCH_TIMEOUT_MS = 12000;
+const DEFAULT_FETCH_RETRIES = 3;
 
 // ---- Series configuration (mirrors Python pipeline) ----
 
@@ -181,6 +243,10 @@ function isoNow(): string {
   return new Date().toISOString();
 }
 
+function snapshotKey(version: string, suffix: 'indicators' | 'fred_raw' | 'indeed_raw'): string {
+  return `snap:${version}:${suffix}`;
+}
+
 function jsonResponse(obj: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(obj), {
     ...init,
@@ -243,6 +309,135 @@ function classifyStatus(z: number | null, inverted = false):
   return 'normal';
 }
 
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function asNumberOr(value: string | null, fallback = 0): number {
+  if (value === null || value === undefined) return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+type FetchRetryOptions = {
+  label: string;
+  timeoutMs?: number;
+  retries?: number;
+};
+
+function isRetryableStatus(status: number): boolean {
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+function backoffMs(attempt: number): number {
+  const base = 300;
+  const exp = base * Math.pow(2, Math.max(0, attempt - 1));
+  const jitter = Math.floor(Math.random() * 120);
+  return Math.min(2500, exp + jitter);
+}
+
+async function fetchWithRetry(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  opts: FetchRetryOptions,
+): Promise<Response> {
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS;
+  const retries = opts.retries ?? DEFAULT_FETCH_RETRIES;
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const resp = await fetch(input, { ...init, signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (resp.ok) return resp;
+
+      if (!isRetryableStatus(resp.status) || attempt === retries) {
+        throw new Error(`${opts.label} failed: HTTP ${resp.status}`);
+      }
+
+      await sleep(backoffMs(attempt));
+      continue;
+    } catch (e) {
+      clearTimeout(timeout);
+      const err = e as Error;
+      lastError = err;
+
+      if (attempt === retries) break;
+      await sleep(backoffMs(attempt));
+    }
+  }
+
+  throw lastError ?? new Error(`${opts.label} failed after retries`);
+}
+
+async function getLatestVersion(env: Env): Promise<string | null> {
+  return env.DI_KV.get(KV_KEYS.latestVersion);
+}
+
+async function getLatestSnapshot<T>(
+  env: Env,
+  suffix: 'indicators' | 'fred_raw' | 'indeed_raw',
+): Promise<T | null> {
+  const version = await getLatestVersion(env);
+  if (version) {
+    const snap = (await env.DI_KV.get(snapshotKey(version, suffix), 'json')) as T | null;
+    if (snap) return snap;
+  }
+
+  // Backward-compatible fallback for pre-versioned snapshots.
+  return (await env.DI_KV.get(`latest:${suffix}`, 'json')) as T | null;
+}
+
+async function appendRunLog(env: Env, entry: RunLogEntry): Promise<void> {
+  const existing = ((await env.DI_KV.get(KV_KEYS.runLog, 'json')) as RunLogEntry[] | null) || [];
+  const next = [entry, ...existing].slice(0, RUN_LOG_MAX);
+  await env.DI_KV.put(KV_KEYS.runLog, JSON.stringify(next));
+}
+
+type RefreshLock = {
+  owner: string;
+  acquired_at: string;
+  expires_at_ms: number;
+};
+
+async function acquireRefreshLock(env: Env, owner: string): Promise<{ ok: boolean; reason?: string }> {
+  const now = Date.now();
+  const current = (await env.DI_KV.get(KV_KEYS.refreshLock, 'json')) as RefreshLock | null;
+
+  if (current && current.expires_at_ms > now) {
+    return { ok: false, reason: `refresh locked by ${current.owner}` };
+  }
+
+  const lock: RefreshLock = {
+    owner,
+    acquired_at: isoNow(),
+    expires_at_ms: now + REFRESH_LOCK_TTL_SEC * 1000,
+  };
+
+  await env.DI_KV.put(KV_KEYS.refreshLock, JSON.stringify(lock), {
+    expirationTtl: REFRESH_LOCK_TTL_SEC,
+  });
+
+  // Best-effort verification (KV is eventually consistent).
+  const verify = (await env.DI_KV.get(KV_KEYS.refreshLock, 'json')) as RefreshLock | null;
+  if (!verify || verify.owner !== owner) {
+    return { ok: false, reason: 'refresh lock verification failed' };
+  }
+
+  return { ok: true };
+}
+
+async function releaseRefreshLock(env: Env, owner: string): Promise<void> {
+  const current = (await env.DI_KV.get(KV_KEYS.refreshLock, 'json')) as RefreshLock | null;
+  if (!current || current.owner !== owner) return;
+  await env.DI_KV.delete(KV_KEYS.refreshLock);
+}
+
 // ---- Fetchers ----
 
 async function fetchFredSeries(env: Env, seriesId: string, observationStart: string): Promise<Obs[]> {
@@ -253,12 +448,18 @@ async function fetchFredSeries(env: Env, seriesId: string, observationStart: str
   url.searchParams.set('sort_order', 'asc');
   url.searchParams.set('observation_start', observationStart);
 
-  const resp = await fetch(url.toString(), {
-    headers: { 'user-agent': 'DisplacementIndex/1.0' },
-  });
-  if (!resp.ok) {
-    throw new Error(`FRED fetch failed for ${seriesId}: ${resp.status}`);
-  }
+  const resp = await fetchWithRetry(
+    url.toString(),
+    {
+      headers: { 'user-agent': 'DisplacementIndex/1.0' },
+    },
+    {
+      label: `FRED ${seriesId}`,
+      timeoutMs: 12000,
+      retries: 3,
+    },
+  );
+
   const data: any = await resp.json();
   const obs = (data.observations || []) as { date: string; value: string }[];
 
@@ -268,29 +469,40 @@ async function fetchFredSeries(env: Env, seriesId: string, observationStart: str
     const v = Number(o.value);
     if (Number.isFinite(v)) cleaned.push({ date: o.date, value: v });
   }
+
+  if (!cleaned.length) {
+    throw new Error(`FRED ${seriesId} returned no usable observations`);
+  }
+
   return cleaned;
 }
 
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.trim().split(/\r?\n/);
+  if (!lines.length) return [];
+
   const header = lines[0].split(',');
   const rows: Record<string, string>[] = [];
+
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
-    // Minimal CSV parse: this dataset has no quoted commas
+    // Minimal parser: current datasets do not contain quoted commas.
     const cols = line.split(',');
     if (cols.length !== header.length) continue;
+
     const row: Record<string, string> = {};
     for (let j = 0; j < header.length; j++) row[header[j]] = cols[j];
     rows.push(row);
   }
+
   return rows;
 }
 
 async function fetchIndeed(): Promise<IndeedRaw> {
-  const [aggResp, secResp] = await Promise.all([fetch(INDEED_AGG_URL), fetch(INDEED_SECTOR_URL)]);
-  if (!aggResp.ok) throw new Error(`Indeed agg fetch failed: ${aggResp.status}`);
-  if (!secResp.ok) throw new Error(`Indeed sector fetch failed: ${secResp.status}`);
+  const [aggResp, secResp] = await Promise.all([
+    fetchWithRetry(INDEED_AGG_URL, {}, { label: 'Indeed aggregate', timeoutMs: 12000, retries: 3 }),
+    fetchWithRetry(INDEED_SECTOR_URL, {}, { label: 'Indeed sectors', timeoutMs: 12000, retries: 3 }),
+  ]);
 
   const aggText = await aggResp.text();
   const secText = await secResp.text();
@@ -310,15 +522,19 @@ async function fetchIndeed(): Promise<IndeedRaw> {
 
   const sectors: IndeedRaw['sectors'] = {};
   const tmp: Record<string, Obs[]> = {};
+
   for (const r of secRows) {
     const name = r.display_name;
     if (!INDEED_TARGET_SECTORS.has(name)) continue;
     if (r.variable !== 'total postings') continue;
+
     const date = r.date;
     const val = r.indeed_job_postings_index;
     if (!date || !val) continue;
+
     const v = Number(val);
     if (!Number.isFinite(v)) continue;
+
     (tmp[name] ||= []).push({ date, value: v });
   }
 
@@ -332,6 +548,14 @@ async function fetchIndeed(): Promise<IndeedRaw> {
       latest: trimmed.length ? trimmed[trimmed.length - 1] : null,
       count: trimmed.length,
     };
+  }
+
+  if (!aggTrim.length) {
+    throw new Error('Indeed aggregate dataset produced no usable rows');
+  }
+
+  if (!Object.keys(sectors).length) {
+    throw new Error('Indeed sector dataset produced no target-sector rows');
   }
 
   return {
@@ -544,36 +768,95 @@ function computeComposite(chainLinks: Record<string, any>) {
   };
 }
 
-async function refreshAll(env: Env) {
+async function refreshAll(env: Env, ctx: RefreshContext): Promise<RefreshSuccess> {
   assertEnv(env);
+  const started = Date.now();
+  const warnings: string[] = [];
 
   // 5 years of history
   const start = new Date();
   start.setUTCDate(start.getUTCDate() - 365 * 5);
   const observationStart = start.toISOString().slice(0, 10);
 
+  const previousFred = await getLatestSnapshot<FredRaw>(env, 'fred_raw');
+  const previousIndeed = await getLatestSnapshot<IndeedRaw>(env, 'indeed_raw');
+
   const fred: FredRaw = {
     fetched_at: isoNow(),
     chain_links: {},
   };
 
-  // Fetch all FRED series
+  const seriesTasks: Array<Promise<{ linkId: string; seriesId: string; meta: FredSeriesMeta; observations: Obs[] }>> = [];
+
   for (const [linkId, seriesMap] of Object.entries(FRED_SERIES)) {
     fred.chain_links[linkId] = {};
     for (const [seriesId, meta] of Object.entries(seriesMap)) {
-      const observations = await fetchFredSeries(env, seriesId, observationStart);
-      const series: FredSeries = {
+      seriesTasks.push(
+        (async () => {
+          const observations = await fetchFredSeries(env, seriesId, observationStart);
+          return { linkId, seriesId, meta, observations };
+        })(),
+      );
+    }
+  }
+
+  const fredResults = await Promise.allSettled(seriesTasks);
+  const missingSeries: string[] = [];
+  let fredFallbackCount = 0;
+
+  for (const r of fredResults) {
+    if (r.status === 'fulfilled') {
+      const { linkId, seriesId, meta, observations } = r.value;
+      fred.chain_links[linkId][seriesId] = {
         ...meta,
         series_id: seriesId,
         observations,
         latest: observations.length ? observations[observations.length - 1] : null,
         count: observations.length,
       };
-      fred.chain_links[linkId][seriesId] = series;
+      continue;
+    }
+
+    const message = r.reason instanceof Error ? r.reason.message : String(r.reason);
+    const match = /FRED\s+([A-Z0-9]+)/.exec(message);
+    const seriesId = match?.[1] || 'UNKNOWN_SERIES';
+
+    // Try to fallback to previous snapshot for this series.
+    let filled = false;
+    if (previousFred) {
+      for (const [prevLinkId, prevSeriesMap] of Object.entries(previousFred.chain_links || {})) {
+        const prevSeries = (prevSeriesMap as Record<string, FredSeries>)[seriesId];
+        if (prevSeries) {
+          fred.chain_links[prevLinkId] ||= {};
+          fred.chain_links[prevLinkId][seriesId] = prevSeries;
+          filled = true;
+          fredFallbackCount += 1;
+          warnings.push(`FRED ${seriesId} fallback to previous snapshot`);
+          break;
+        }
+      }
+    }
+
+    if (!filled) {
+      missingSeries.push(`${seriesId}: ${message}`);
     }
   }
 
-  const indeed = await fetchIndeed();
+  if (missingSeries.length) {
+    throw new Error(`Critical FRED fetch failures (no fallback): ${missingSeries.join(' | ')}`);
+  }
+
+  let indeed: IndeedRaw;
+  let indeedStatus: 'fresh' | 'stale' = 'fresh';
+
+  try {
+    indeed = await fetchIndeed();
+  } catch (e) {
+    if (!previousIndeed) throw e;
+    indeed = previousIndeed;
+    indeedStatus = 'stale';
+    warnings.push(`Indeed fallback to previous snapshot: ${(e as Error).message}`);
+  }
 
   const derived = {
     ghost_gdp: computeGhostGDP(fred),
@@ -583,6 +866,8 @@ async function refreshAll(env: Env) {
   const chainLinks = computeChainLinks(fred);
   const composite = computeComposite(chainLinks);
 
+  const version = `${Date.now()}-${ctx.runId.slice(0, 8)}`;
+
   const indicators = {
     generated_at: isoNow(),
     fred_fetched_at: fred.fetched_at,
@@ -590,15 +875,150 @@ async function refreshAll(env: Env) {
     derived_indicators: derived,
     chain_links: chainLinks,
     indeed_fetched_at: indeed.fetched_at,
+    pipeline: {
+      version,
+      trigger: ctx.trigger,
+      run_id: ctx.runId,
+      source_status: {
+        fred: fredFallbackCount > 0 ? 'stale' : 'fresh',
+        indeed: indeedStatus,
+      },
+      fallback_counts: {
+        fred_series: fredFallbackCount,
+        indeed: indeedStatus === 'stale' ? 1 : 0,
+      },
+      warnings,
+    },
   };
 
-  // Store: latest snapshot keys
-  await env.DI_KV.put('latest:indicators', JSON.stringify(indicators));
-  await env.DI_KV.put('latest:fred_raw', JSON.stringify(fred));
-  await env.DI_KV.put('latest:indeed_raw', JSON.stringify(indeed));
-  await env.DI_KV.put('meta:last_updated', indicators.generated_at);
+  // Versioned snapshots first, pointer flip last (atomic publish model).
+  await Promise.all([
+    env.DI_KV.put(snapshotKey(version, 'indicators'), JSON.stringify(indicators)),
+    env.DI_KV.put(snapshotKey(version, 'fred_raw'), JSON.stringify(fred)),
+    env.DI_KV.put(snapshotKey(version, 'indeed_raw'), JSON.stringify(indeed)),
+  ]);
 
-  return { indicators, fred, indeed };
+  await env.DI_KV.put(KV_KEYS.latestVersion, version);
+
+  // Keep legacy keys updated for backwards compatibility.
+  await Promise.all([
+    env.DI_KV.put('latest:indicators', JSON.stringify(indicators)),
+    env.DI_KV.put('latest:fred_raw', JSON.stringify(fred)),
+    env.DI_KV.put('latest:indeed_raw', JSON.stringify(indeed)),
+  ]);
+
+  return {
+    version,
+    indicators,
+    fred,
+    indeed,
+    warnings,
+    durationMs: Date.now() - started,
+  };
+}
+
+async function runRefresh(env: Env, trigger: RefreshSource): Promise<RefreshResult> {
+  const runId = crypto.randomUUID();
+  const startedAt = isoNow();
+  const startedMs = Date.now();
+
+  await env.DI_KV.put(KV_KEYS.lastAttempt, startedAt);
+
+  const lockOwner = `${trigger}:${runId}`;
+  const lock = await acquireRefreshLock(env, lockOwner);
+
+  if (!lock.ok) {
+    const result: RefreshResult = {
+      ok: false,
+      skipped: true,
+      reason: lock.reason || 'refresh lock active',
+      trigger,
+      runId,
+      startedAt,
+      finishedAt: isoNow(),
+      durationMs: Date.now() - startedMs,
+    };
+
+    await appendRunLog(env, {
+      ts: result.finishedAt,
+      ok: false,
+      skipped: true,
+      reason: result.reason,
+      trigger,
+      run_id: runId,
+      duration_ms: result.durationMs,
+    });
+
+    return result;
+  }
+
+  try {
+    const out = await refreshAll(env, { trigger, runId, startedAt });
+    const finishedAt = isoNow();
+
+    await Promise.all([
+      env.DI_KV.put(KV_KEYS.lastUpdated, out.indicators.generated_at),
+      env.DI_KV.put(KV_KEYS.lastSuccess, out.indicators.generated_at),
+      env.DI_KV.put(KV_KEYS.lastError, ''),
+      env.DI_KV.put(KV_KEYS.consecutiveFailures, '0'),
+      env.DI_KV.put(KV_KEYS.lastDurationMs, String(out.durationMs)),
+    ]);
+
+    await appendRunLog(env, {
+      ts: finishedAt,
+      ok: true,
+      trigger,
+      run_id: runId,
+      duration_ms: out.durationMs,
+      version: out.version,
+      warnings_count: out.warnings.length,
+    });
+
+    return {
+      ok: true,
+      trigger,
+      runId,
+      startedAt,
+      finishedAt,
+      durationMs: out.durationMs,
+      version: out.version,
+      warnings: out.warnings,
+    };
+  } catch (e) {
+    const error = e as Error;
+    const finishedAt = isoNow();
+    const durationMs = Date.now() - startedMs;
+
+    const currentFailures = asNumberOr(await env.DI_KV.get(KV_KEYS.consecutiveFailures), 0);
+    const nextFailures = currentFailures + 1;
+
+    await Promise.all([
+      env.DI_KV.put(KV_KEYS.lastError, error.message),
+      env.DI_KV.put(KV_KEYS.consecutiveFailures, String(nextFailures)),
+      env.DI_KV.put(KV_KEYS.lastDurationMs, String(durationMs)),
+    ]);
+
+    await appendRunLog(env, {
+      ts: finishedAt,
+      ok: false,
+      error: error.message,
+      trigger,
+      run_id: runId,
+      duration_ms: durationMs,
+    });
+
+    return {
+      ok: false,
+      error: error.message,
+      trigger,
+      runId,
+      startedAt,
+      finishedAt,
+      durationMs,
+    };
+  } finally {
+    await releaseRefreshLock(env, lockOwner);
+  }
 }
 
 // ---- Request routing ----
@@ -607,24 +1027,65 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
 
   if (url.pathname === '/api/health') {
-    const last = await env.DI_KV.get('meta:last_updated');
-    return jsonResponse({ ok: true, last_updated: last });
+    const [
+      lastUpdated,
+      lastAttempt,
+      lastSuccess,
+      lastError,
+      failuresRaw,
+      latestVersion,
+      lastDurationMs,
+    ] = await Promise.all([
+      env.DI_KV.get(KV_KEYS.lastUpdated),
+      env.DI_KV.get(KV_KEYS.lastAttempt),
+      env.DI_KV.get(KV_KEYS.lastSuccess),
+      env.DI_KV.get(KV_KEYS.lastError),
+      env.DI_KV.get(KV_KEYS.consecutiveFailures),
+      env.DI_KV.get(KV_KEYS.latestVersion),
+      env.DI_KV.get(KV_KEYS.lastDurationMs),
+    ]);
+
+    const failures = asNumberOr(failuresRaw, 0);
+    const durationMs = asNumberOr(lastDurationMs, 0);
+
+    let ageMinutes: number | null = null;
+    if (lastSuccess) {
+      const ageMs = Date.now() - new Date(lastSuccess).getTime();
+      if (Number.isFinite(ageMs) && ageMs >= 0) {
+        ageMinutes = Number((ageMs / 60000).toFixed(1));
+      }
+    }
+
+    const healthy = !!lastSuccess && (ageMinutes === null ? true : ageMinutes < 12 * 60) && failures < 3;
+
+    return jsonResponse({
+      ok: true,
+      healthy,
+      last_updated: lastUpdated,
+      last_attempt: lastAttempt,
+      last_success: lastSuccess,
+      last_error: lastError || null,
+      consecutive_failures: failures,
+      latest_version: latestVersion,
+      last_duration_ms: durationMs,
+      age_minutes: ageMinutes,
+    });
   }
 
   if (url.pathname === '/api/indicators') {
-    const data = await env.DI_KV.get('latest:indicators', 'json');
+    const data = await getLatestSnapshot<any>(env, 'indicators');
     if (!data) return jsonResponse({ error: 'No data yet. Cron has not run.' }, { status: 503 });
     return jsonResponse(data);
   }
 
   if (url.pathname === '/api/fred_raw') {
-    const data = await env.DI_KV.get('latest:fred_raw', 'json');
+    const data = await getLatestSnapshot<any>(env, 'fred_raw');
     if (!data) return jsonResponse({ error: 'No data yet.' }, { status: 503 });
     return jsonResponse(data);
   }
 
   if (url.pathname === '/api/indeed_raw') {
-    const data = await env.DI_KV.get('latest:indeed_raw', 'json');
+    const data = await getLatestSnapshot<any>(env, 'indeed_raw');
     if (!data) return jsonResponse({ error: 'No data yet.' }, { status: 503 });
     return jsonResponse(data);
   }
@@ -634,15 +1095,51 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
     if (!env.REFRESH_TOKEN || token !== env.REFRESH_TOKEN) {
       return jsonResponse({ error: 'unauthorized' }, { status: 401 });
     }
-    const out = await refreshAll(env);
-    return jsonResponse({ ok: true, generated_at: out.indicators.generated_at });
+
+    const result = await runRefresh(env, 'manual');
+
+    if (result.skipped) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: 'refresh_locked',
+          reason: result.reason,
+          run_id: result.runId,
+        },
+        { status: 409 },
+      );
+    }
+
+    if (!result.ok) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: result.error || 'refresh_failed',
+          run_id: result.runId,
+        },
+        { status: 500 },
+      );
+    }
+
+    return jsonResponse({
+      ok: true,
+      generated_at: result.finishedAt,
+      version: result.version,
+      warnings: result.warnings || [],
+      run_id: result.runId,
+    });
+  }
+
+  if (url.pathname === '/api/runs') {
+    const runs = ((await env.DI_KV.get(KV_KEYS.runLog, 'json')) as RunLogEntry[] | null) || [];
+    return jsonResponse({ ok: true, runs });
   }
 
   return jsonResponse({ error: 'not_found' }, { status: 404 });
 }
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/api/')) {
@@ -663,15 +1160,19 @@ export default {
     return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
   },
 
-  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(
       (async () => {
-        try {
-          await refreshAll(env);
-        } catch (e) {
+        const result = await runRefresh(env, 'cron');
+        if (!result.ok && !result.skipped) {
           // eslint-disable-next-line no-console
-          console.log('Refresh failed:', (e as Error).message);
-          throw e;
+          console.log('Refresh failed:', result.error || 'unknown error');
+          throw new Error(result.error || 'scheduled refresh failed');
+        }
+
+        if (result.skipped) {
+          // eslint-disable-next-line no-console
+          console.log('Refresh skipped:', result.reason || 'lock active');
         }
       })(),
     );
