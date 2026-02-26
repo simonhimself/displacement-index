@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Methodology — The Displacement Index</title>
+<meta name="description" content="Methodology and data sources for The Displacement Index.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<style>
+  .page {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+  .page h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 2.4rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    margin: 2.5rem 0 1rem;
+    line-height: 1.1;
+  }
+  .page h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin: 2rem 0 0.75rem;
+  }
+  .page p, .page li {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    max-width: 760px;
+  }
+  .page ul { padding-left: 1.25rem; margin: 0.75rem 0; }
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text);
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--border-light);
+    padding: 0.15rem 0.35rem;
+    border-radius: 6px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+  }
+  .card h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+  }
+  .small {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">The Displacement <span>Index</span></div>
+  <div class="nav-links">
+    <a href="../index.html#dashboard">Dashboard</a>
+    <a href="./methodology.html">Methodology</a>
+    <a href="./about.html">About</a>
+    <a href="https://github.com/simonhimself/displacement-index" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+  <button class="nav-mobile" aria-label="Menu">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+  </button>
+</nav>
+
+<main class="page">
+  <div class="hero-eyebrow">Documentation</div>
+  <h1>Methodology</h1>
+  <p>The Displacement Index is a data-driven dashboard tracking a specific economic hypothesis: that rapid AI capability improvement could trigger a chain reaction through white-collar labor markets, consumer spending, credit markets, and housing.</p>
+
+  <h2>The Displacement Chain</h2>
+  <p>We track five linked “chain links” that would be expected to deteriorate in sequence:</p>
+  <div class="card">
+    <div class="small">Chain Links</div>
+    <ul>
+      <li><strong>White-Collar Displacement</strong> — sector unemployment and employment counts</li>
+      <li><strong>Consumer Spending</strong> — real consumption, sentiment, retail sales</li>
+      <li><strong>Ghost GDP</strong> — productivity rising faster than real wages (output not reaching workers)</li>
+      <li><strong>Credit Stress</strong> — high-yield spreads and delinquency rates</li>
+      <li><strong>Mortgage Stress</strong> — residential mortgage delinquency rates</li>
+    </ul>
+  </div>
+
+  <h2>Scoring</h2>
+  <p>Each indicator is compared against its own 5-year historical distribution using a z-score (standard deviations from the mean). Link-level status is derived from the average signal intensity of its underlying indicators.</p>
+  <div class="card">
+    <div class="small">Status thresholds</div>
+    <ul>
+      <li><strong>Normal</strong>: below 0.5σ</li>
+      <li><strong>Elevated</strong>: 0.5–1.0σ</li>
+      <li><strong>Warning</strong>: 1.0–2.0σ</li>
+      <li><strong>Critical</strong>: above 2.0σ</li>
+    </ul>
+  </div>
+
+  <p>The composite index is a 0–100 mapping of average chain severity.</p>
+
+  <h2>Data Sources</h2>
+  <p>All inputs are sourced from public datasets:</p>
+  <ul>
+    <li><strong>FRED</strong> (St. Louis Fed): macroeconomic time series (employment, spending, credit, housing)</li>
+    <li><strong>Indeed Hiring Lab</strong>: job postings indices by sector (CC-BY-4.0)</li>
+  </ul>
+
+  <h2>Notes</h2>
+  <ul>
+    <li>This site is designed to be <strong>descriptive</strong>, not predictive.</li>
+    <li>Eventual consistency applies to KV-backed updates (typically ≤60s global propagation).</li>
+    <li>Scheduled refresh runs every 6 hours (UTC).</li>
+  </ul>
+</main>
+
+<footer>
+  <span>The Displacement Index · Not financial advice · Data from FRED & BLS</span>
+  <span><a href="./methodology.html">Methodology</a> · <a href="https://github.com/simonhimself/displacement-index" target="_blank" rel="noopener">GitHub ↗</a></span>
+</footer>
+
+</body>
+</html>
