@@ -3,9 +3,10 @@
  * Reads indicators.json + fred_raw.json and renders the dashboard.
  */
 
-const DATA_PATH = 'data/indicators.json';
-const FRED_PATH = 'data/fred_raw.json';
-const INDEED_PATH = 'data/indeed_raw.json';
+// Data is served by the Worker API (cron-refreshed + stored in KV)
+const DATA_PATH = '/api/indicators';
+const FRED_PATH = '/api/fred_raw';
+const INDEED_PATH = '/api/indeed_raw';
 
 // Chain link metadata (static)
 const CHAIN_LINKS = {
@@ -339,7 +340,7 @@ function renderCharts(fredData) {
     card.innerHTML = `
       <h4>${config.title}</h4>
       <div class="chart-subtitle">${config.series} · ${observations.length} data points</div>
-      <canvas id="${canvasId}"></canvas>
+      <div class="chart-wrap"><canvas id="${canvasId}"></canvas></div>
     `;
     container.appendChild(card);
 
@@ -361,11 +362,13 @@ function renderCharts(fredData) {
           pointRadius: 0,
           pointHoverRadius: 4,
           tension: 0.3,
+          spanGaps: true,
         }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: { duration: 0 },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -452,7 +455,9 @@ function renderIndeed(indeedData) {
         <div class="indeed-agg-label">Overall US Postings</div>
         <div class="indeed-agg-value">${agg.latest ? agg.latest.value.toFixed(1) : '—'}</div>
         <div class="indeed-agg-baseline">Index (100 = Feb 2020)</div>
-        <canvas id="chart-indeed-agg" style="width:100%;height:150px;margin-top:1rem"></canvas>
+        <div class="indeed-chart-wrap">
+          <canvas id="chart-indeed-agg"></canvas>
+        </div>
       </div>
       <div class="indeed-sectors">
         <div class="indeed-sectors-label">White-Collar Sectors</div>
@@ -479,11 +484,13 @@ function renderIndeed(indeedData) {
             fill: true,
             pointRadius: 0,
             tension: 0.3,
+            spanGaps: true,
           }],
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: { duration: 0 },
           plugins: { legend: { display: false },
             tooltip: {
               backgroundColor: '#1C1917',

@@ -1,0 +1,10 @@
+{
+  "name": "displacement-index",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:remote": "wrangler dev --remote",
+    "deploy": "wrangler deploy"
+  }
+}

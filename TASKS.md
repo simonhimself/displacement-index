@@ -25,23 +25,32 @@
 - [x] `compute_derived.py` — Ghost GDP, displacement velocity, chain statuses, composite 0-100
 - [x] `build_data.py` — orchestrator (all 4 fetchers + compute)
 - [x] Full pipeline tested — 3,302 FRED obs + 730 Indeed obs, 18.4s, DI = 10/100
-- [ ] Wire Indeed + context indicators into site frontend
-- [ ] Cron job on VPS (daily 06:00 UTC) — after site deploy
+- [x] Wire Indeed + context indicators into site frontend
+- [x] VPS cron job approach deprecated (moved to Cloudflare cron triggers)
 
 ## Phase 2: Website MVP
 - [x] Design mockups — V1 Editorial chosen (v1-editorial.html)
 - [x] frontend-design + cloudflare skills added to agent config
 - [~] **Production site build (V1 Editorial → real site)**
-  - [ ] Set up project structure (static site, build system)
-  - [ ] Wire data pipeline JSON → dynamic HTML rendering
-  - [ ] Add interactive charts (Chart.js) per indicator
+  - [x] Set up project structure (static site)
+  - [x] Wire pipeline JSON → dynamic HTML rendering
+  - [x] Add interactive charts (Chart.js) per indicator
   - [ ] Add time series sparklines in chain overview
-  - [ ] Methodology/about page
-  - [ ] Disclaimer footer
-  - [ ] Mobile responsive polish
-  - [ ] OG meta tags for social sharing
-- [ ] GitHub repo setup (public)
-- [ ] Cloudflare Pages deploy
+  - [x] Methodology/about page
+  - [x] Disclaimer footer (basic)
+  - [x] Mobile responsive polish
+  - [x] OG meta tags (basic)
+
+- [~] **Cloudflare self-updating deployment (Workers + Static Assets + Cron + KV)**
+  - [x] Create `wrangler.jsonc` + Worker scaffold (`src/worker.ts`) on branch `cf-deployment`
+  - [x] Switch frontend to fetch from `/api/*` instead of `site/data/*.json`
+  - [x] Create KV namespace + wire IDs into `wrangler.jsonc`
+  - [x] Set Worker secrets: `FRED_API_KEY` (+ `REFRESH_TOKEN` for manual refresh)
+  - [x] `wrangler deploy`
+  - [x] Verify cron refresh + `/api/health`
+  - [ ] Configure GitHub ↔ Cloudflare deploy on push (optional; currently deploying via wrangler)
+- [x] GitHub repo setup (public)
+- [x] Cloudflare deploy (Workers)
 
 ## Phase 3: Content & Launch
 - [ ] "How to read this dashboard" explainer copy
@@ -64,4 +73,6 @@
 - 2026-02-23: Design exploration. Two mockups (V1 Editorial, V2 Stark). V1 chosen. frontend-design + cloudflare skills added.
 - 2026-02-23: Starting Phase 2 production build.
 - 2026-02-23: Production site built (V1 editorial, dynamic from JSON, Chart.js charts). Working preview.
-- 2026-02-26: Added 3 context FRED series (new biz apps, construction employment, JOLTS) + Indeed Hiring Lab postings (aggregate + 5 sectors). Inspired by Citadel counter-thesis. SW dev postings 29% below pre-COVID = interesting signal. DI moved 5→10 as credit stress ticked to Warning.
+- 2026-02-26: Added 3 context FRED series (new biz apps, construction employment, JOLTS) + Indeed Hiring Lab postings (aggregate + 5 sectors). SW dev postings ~29% below Feb-2020 baseline while aggregate postings recovered.
+- 2026-02-26: Cloudflare Workers deployment live (Static Assets + KV + Cron). Site reads `/api/*` endpoints backed by KV.
+- 2026-02-26: UX fixes: chart sizing wrappers (prevents runaway tall charts), added About + Methodology pages, removed preview.html from deploy.
