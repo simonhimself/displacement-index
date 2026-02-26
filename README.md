@@ -97,14 +97,6 @@ curl -X POST https://displacementindex.com/api/refresh \
 
 ---
 
-## Security Notes
-
-- Secrets are stored outside git (`secrets/` + Worker Secrets), not in repository code.
-- `secrets/` is gitignored.
-- Cloudflare health monitoring is configured via `/api/health` + Health Checks notification.
-
----
-
 ## Disclaimer
 
 The Displacement Index is an informational measurement tool, not investment advice.
