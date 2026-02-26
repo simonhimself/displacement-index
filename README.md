@@ -12,16 +12,14 @@ A public, data-driven dashboard tracking whether AI-driven productivity gains ar
 
 ## Current Architecture (Production)
 
-This project is now fully Cloudflare-native:
+The dashboard is fully managed on Cloudflare and updates itself automatically:
 
-- **Cloudflare Workers** (API + scheduled refresh logic)
-- **Workers Static Assets** (serves `site/`)
-- **Cloudflare KV** (latest + versioned snapshots)
-- **Cron Trigger** (`0 */6 * * *`, every 6 hours UTC)
-- **Worker Secrets** (`FRED_API_KEY`, `REFRESH_TOKEN`)
-- **Workers Observability logs** enabled
-
-No VPS is required for data refresh or site serving.
+- **Cloudflare Workers** runs the API and scheduled refresh logic.
+- **Workers Static Assets** serves the frontend from the same deployment.
+- **Cloudflare KV** stores the latest dataset plus versioned snapshots.
+- **Cron Trigger** refreshes data every 6 hours (`0 */6 * * *`, UTC).
+- **Worker Secrets** store runtime credentials (`FRED_API_KEY`, `REFRESH_TOKEN`).
+- **Workers Observability** is enabled for logs and runtime diagnostics.
 
 ---
 
