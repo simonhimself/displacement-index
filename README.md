@@ -2,82 +2,109 @@
 
 **Is AI prosperity reaching the real economy?**
 
-A data-driven dashboard tracking whether AI-driven productivity gains are translating into broad prosperity — or hollowing out the economy through white-collar displacement, spending collapse, and credit stress.
+A public, data-driven dashboard tracking whether AI-driven productivity gains are translating into broad prosperity — or hollowing out the economy through white-collar displacement, spending weakness, credit stress, and mortgage instability.
 
-## The Displacement Chain
+- **Live site:** https://displacementindex.com
+- **Worker URL:** https://displacement-index.simons.workers.dev
+- **Repo:** https://github.com/simonhimself/displacement-index
 
-We track five linked economic signals that would activate in sequence if AI-driven displacement is unfolding:
+---
 
-1. **White-Collar Displacement** — Professional & technical sector unemployment
-2. **Consumer Spending** — Real consumption, sentiment & retail sales
-3. **Ghost GDP** — Productivity growing faster than wages (output not reaching workers)
-4. **Credit Stress** — High-yield spreads & consumer delinquencies
-5. **Mortgage Stress** — Residential mortgage delinquencies
+## Current Architecture (Production)
 
-Plus context indicators: job postings by sector (Indeed), new business formation, construction employment, and JOLTS job openings.
+This project is now fully Cloudflare-native:
+
+- **Cloudflare Workers** (API + scheduled refresh logic)
+- **Workers Static Assets** (serves `site/`)
+- **Cloudflare KV** (latest + versioned snapshots)
+- **Cron Trigger** (`0 */6 * * *`, every 6 hours UTC)
+- **Worker Secrets** (`FRED_API_KEY`, `REFRESH_TOKEN`)
+- **Workers Observability logs** enabled
+
+No VPS is required for data refresh or site serving.
+
+---
 
 ## Data Sources
 
-All data is from free, public sources:
+- **FRED** (St. Louis Fed API; underlying sources include BLS/BEA/Census/FDIC/ICE-BofA/UMich)
+  - 17 macro series used across displacement/spending/ghost GDP/credit/mortgage/context
+- **Indeed Hiring Lab** (CC-BY-4.0)
+  - Aggregate postings + selected white-collar sectors
 
-| Source | Data | Frequency |
-|--------|------|-----------|
-| [FRED](https://fred.stlouisfed.org/) | 17 economic series (employment, spending, credit, housing) | Daily to quarterly |
-| [Indeed Hiring Lab](https://github.com/hiring-lab/job_postings_tracker) | Job postings by sector (CC-BY-4.0) | Daily |
-| [BLS](https://www.bls.gov/) | Employment & labor market data (via FRED) | Monthly |
+Derived indicators are computed in the Worker:
+- Ghost GDP
+- Displacement Velocity
+- Chain link statuses (normal/elevated/warning/critical)
+- Composite Displacement Index (0–100)
 
-## Methodology
+---
 
-Each chain link is scored using z-scores against 5-year historical distributions:
-- **Normal**: < 0.5σ
-- **Elevated**: 0.5–1.0σ  
-- **Warning**: 1.0–2.0σ
-- **Critical**: > 2.0σ
+## API Endpoints
 
-The composite Displacement Index maps the average chain link severity to a 0–100 scale.
+- `GET /api/health`
+- `GET /api/indicators`
+- `GET /api/fred_raw`
+- `GET /api/indeed_raw`
+- `GET /api/runs` (recent refresh run log)
+- `POST /api/refresh` (Bearer token protected)
+
+`/api/health` now returns:
+- **200** when healthy
+- **503** when unhealthy (for Cloudflare Health Check alerting)
+
+---
 
 ## Project Structure
 
-```
-├── site/              # Static website (HTML/CSS/JS)
-│   ├── index.html     # Main dashboard
-│   ├── css/style.css  # Styles
-│   └── js/app.js      # Data rendering + charts
-├── scripts/           # Data pipeline
-│   ├── build_data.py  # Orchestrator (run this)
-│   ├── fetch_fred.py  # FRED API fetcher
-│   ├── fetch_indeed.py # Indeed Hiring Lab fetcher
-│   ├── fetch_warn.py  # Unemployment claims fetcher
-│   └── compute_derived.py # Derived indicators + scoring
-├── data/              # Pipeline output (JSON)
-├── mockups/           # Design explorations
-├── PRD.md             # Product requirements
-└── TASKS.md           # Task tracker
+```text
+├── site/                 # Static frontend (HTML/CSS/JS)
+│   ├── index.html
+│   ├── css/style.css
+│   ├── js/app.js
+│   └── pages/
+├── src/
+│   └── worker.ts         # Worker API + cron refresh pipeline
+├── wrangler.jsonc        # Worker/KV/assets/cron/observability config
+├── PRD.md
+├── TASKS.md
+├── PR_STABILITY.md
+├── scripts/              # Legacy/local Python pipeline (not production path)
+└── data/                 # Legacy/local pipeline outputs
 ```
 
-## Running the Pipeline
+---
+
+## Local Development
 
 ```bash
-export FRED_API_KEY=your_key  # Free: https://fredaccount.stlouisfed.org/apikeys
-python3 scripts/build_data.py
+# from project root
+npm run dev
 ```
 
-Outputs JSON files to `data/` which the site reads client-side.
-
-## Running the Site
-
-Copy data to site directory and serve:
+Deploy:
 
 ```bash
-cp data/*.json site/data/
-cd site && python3 -m http.server 8080
+npm run deploy
 ```
 
-## License
+Manual refresh (requires token):
 
-Data: See individual source licenses (FRED: public domain, Indeed: CC-BY-4.0).  
-Code: MIT.
+```bash
+curl -X POST https://displacementindex.com/api/refresh \
+  -H "Authorization: Bearer <REFRESH_TOKEN>"
+```
+
+---
+
+## Security Notes
+
+- Secrets are stored outside git (`secrets/` + Worker Secrets), not in repository code.
+- `secrets/` is gitignored.
+- Cloudflare health monitoring is configured via `/api/health` + Health Checks notification.
+
+---
 
 ## Disclaimer
 
-The Displacement Index is an informational tool, not financial advice. All data sourced from public government and third-party databases.
+The Displacement Index is an informational measurement tool, not investment advice.

@@ -2,153 +2,123 @@
 
 ## Overview
 
-A public dashboard that tracks whether the "AI prosperity paradox" scenario is unfolding — where AI exceeds expectations but causes economic damage through white-collar displacement, consumer spending collapse, credit stress, and mortgage market instability.
+The Displacement Index is a public dashboard that tracks whether AI-driven productivity gains are flowing through to households, or concentrating while labor and credit conditions deteriorate.
 
-**Not a prediction. A tracker.** We map the causal chain and let the data speak.
+**Positioning:** Not a prediction market. Not a hot take feed. A transparent macro tracker.
 
-**Name:** The Displacement Index
-**Domain:** displacementindex.com (+ .io backup)
-**Tagline:** TBD — something like "Tracking what AI prosperity costs"
-**X:** Posted from @simonhimself
+- **Name:** The Displacement Index
+- **Domain:** https://displacementindex.com
+- **Voice:** Clinical observer on-site; interpretation/opinion lives on Simon’s X account
+- **Distribution:** Posted from @simonhimself
 
-## Goals
+## Product Goals
 
-1. **Drive traffic** — viral, shareable, provocative data visualizations
-2. **Grow newsletter subscribers** — free newsletter with weekly/biweekly updates
-3. **Build social media presence** — Twitter/X account, shareable charts
-4. **Establish credibility** — rigorous data, transparent methodology
+1. Build a credible, shareable public macro dashboard
+2. Track chain-linked labor/spending/credit signals in one place
+3. Create a reliable self-updating system with minimal operational overhead
+4. Provide transparent methodology + open-source implementation
 
-## Non-Goals
+## Non-Goals (MVP)
 
-- Paid tiers or subscriptions
-- Investment advice or trade recommendations
-- Being a Citrini derivative (own brand, own voice, own thesis framing)
+- Paid subscriptions
+- Investment recommendations
+- Newsletter implementation (planned for v2, not MVP)
+- Heavy custom backend infrastructure
 
-## Core Concept
+## Core Framework
 
-### The Causal Chain
+### Causal Chain
 
-We track 5 links in a macro chain. Each link has 2-4 indicators. Each indicator has a status (normal → elevated → critical) based on historical context + rate of change.
+We monitor five linked stress points:
 
-```
-[AI Adoption Speed] 
-    → [White-Collar Displacement] 
-        → [Consumer Spending Weakness] 
-            → [Credit Stress] 
-                → [Mortgage/Housing Cracks]
-```
+1. **White-Collar Displacement**
+2. **Consumer Spending**
+3. **Ghost GDP** (productivity/wage divergence)
+4. **Credit Stress**
+5. **Mortgage & Housing Stress**
 
-### The Dashboard
+A composite index (0–100) summarizes chain severity from individual link statuses.
 
-- **Hero:** Single composite score or visual (thermometer? gauge? chain links?)
-- **Chain view:** 5 sections, each showing its indicators with current values, trend, and status
-- **History:** Each indicator shows a time series chart (interactive)
-- **"Ghost GDP" indicator:** Headline feature — productivity vs wage growth divergence
-- **Last updated:** Timestamp showing data freshness
+### Indicator Method
 
-### The Newsletter
+- Each indicator is normalized via z-score vs 5-year history
+- Link statuses: normal / elevated / warning / critical
+- Composite maps link status levels into a 0–100 score
 
-- Weekly or biweekly email
-- "What moved this week" — which indicators changed, what it means
-- Written in an accessible, slightly provocative voice (not academic, not clickbait)
-- Signup via embedded form on the site
+## Data Sources (Current)
 
-## Data Architecture
+### FRED (primary)
+17 series across labor, spending, productivity, credit, mortgage, and context:
 
-### Source: FRED API (API key)
+- Displacement: `LNU04032239`, `LNU04032237`, `CES6054000001`, `UNRATE`
+- Spending: `PCEC96`, `UMCSENT`, `RSAFS`
+- Ghost GDP: `OPHNFB`, `LES1252881600Q`, `M2V`
+- Credit: `BAMLH0A0HYM2`, `BAMLH0A3HYC`, `DRCLACBS`
+- Mortgage: `DRSFRMACBS`
+- Context: `BABATOTALSAUS`, `USCONS`, `JTSJOL`
 
-Core chain + context series currently used:
+### Indeed Hiring Lab (CC-BY-4.0)
+- Aggregate postings index
+- Sector postings (Software Dev, Marketing, Media & Comms, Banking & Finance, Accounting)
 
-| Category | Indicator | FRED Series | Frequency |
-|---|---|---|---|
-| Displacement | Unemployment: Prof & Business Services | LNU04032239 | Monthly |
-| Displacement | Unemployment: Information Industry | LNU04032237 | Monthly |
-| Displacement | Employment: Prof/Sci/Tech Services | CES6054000001 | Monthly |
-| Baseline | Unemployment Rate (overall) | UNRATE | Monthly |
-| Spending | Real Personal Consumption | PCEC96 | Monthly |
-| Spending | Consumer Sentiment (UMich) | UMCSENT | Monthly |
-| Spending | Retail Sales | RSAFS | Monthly |
-| Ghost GDP | Output per hour (productivity) | OPHNFB | Quarterly |
-| Ghost GDP | Real median weekly earnings | LES1252881600Q | Quarterly |
-| Ghost GDP | Velocity of M2 | M2V | Quarterly |
-| Credit | HY OAS | BAMLH0A0HYM2 | Daily |
-| Credit | CCC & Lower OAS | BAMLH0A3HYC | Daily |
-| Credit | Consumer loan delinquency | DRCLACBS | Quarterly |
-| Mortgage | SF mortgage delinquency | DRSFRMACBS | Quarterly |
-| Context | New business applications | BABATOTALSAUS | Monthly |
-| Context | Construction employment | USCONS | Monthly |
-| Context | Job openings (JOLTS) | JTSJOL | Monthly |
+## Technical Architecture (Current Production)
 
-### Source: Unemployment Claims (FRED)
+### Cloudflare-native stack
 
-- **ICSA** (weekly initial claims)
-- **CCSA** (weekly continued claims)
+- **Workers runtime** (`src/worker.ts`)
+- **Static Assets binding** serving `site/`
+- **KV** for snapshot storage
+- **Cron Trigger** every 6 hours (`0 */6 * * *`)
+- **Secrets:** `FRED_API_KEY`, `REFRESH_TOKEN`
+- **Observability logs:** enabled in Wrangler + dashboard
 
-### Source: Indeed Hiring Lab (public GitHub, CC-BY-4.0)
+### API surface
 
-- Aggregate job postings index (US)
-- Sector-level postings for key white-collar categories (currently: Software Development, Marketing, Media & Communications, Banking & Finance, Accounting)
+- `GET /api/health`
+- `GET /api/indicators`
+- `GET /api/fred_raw`
+- `GET /api/indeed_raw`
+- `GET /api/runs`
+- `POST /api/refresh` (Bearer protected)
 
-### Market data
-Not currently included in the index MVP (can add later if desired).
+### Reliability hardening implemented
 
-### Derived Indicators (we compute)
+- Fetch timeout + retry/backoff
+- Parallel FRED pulls with per-series fallback
+- Indeed fallback to last good snapshot
+- Versioned KV snapshots + atomic pointer switch
+- Refresh lock to reduce overlap races
+- Run metadata + rolling run log
+- Frontend stale data banner (>12h)
+- `/api/health` returns **503** when unhealthy (for Health Check alerting)
 
-- **Ghost GDP Score:** Productivity growth minus real wage growth (divergence = ghost GDP)
-- **Displacement Velocity:** Rate of change in white-collar unemployment vs overall
-- **Chain Tension:** Composite of all 5 links — how many are flashing
+## UX / Design (V1 Editorial)
 
-## Tech Stack (current)
+- Warm parchment editorial style (not crypto/fintwit aesthetic)
+- Fraunces + DM Sans + JetBrains Mono
+- Inline metric tooltips with concise definitions + sources
+- Methodology and About pages
+- Mobile-responsive layout
 
-### Workers + Static Assets + Cron + KV (deployed)
+## Launch/Operations Status
 
-We moved to a Cloudflare-native, self-updating architecture:
+- Domain live on Cloudflare: `displacementindex.com`
+- Worker custom domain attached (`root` + `www`)
+- Health check notification configured on `/api/health` unhealthy state
+- Main branch in GitHub is source-of-truth
 
-- **Hosting:** Cloudflare **Workers** with **Static Assets** binding (serves `site/`)
-- **Data refresh:** Cloudflare **Cron Trigger** (every 6 hours)
-- **Storage:** Cloudflare **KV** for latest snapshot blobs
-- **APIs:** Worker exposes:
-  - `GET /api/health`
-  - `GET /api/indicators`
-  - `GET /api/fred_raw`
-  - `GET /api/indeed_raw`
-  - `POST /api/refresh` (token-protected, optional)
-- **Frontend:** reads from `/api/*` (no `site/data/*.json`)
-- **Charts:** Chart.js (client-side)
+## Open Decisions / Next Enhancements
 
-**Motivation:** deploy once; Cloudflare continuously refreshes data without relying on a VPS.
-
-### Source code
-- GitHub repo: `simonhimself/displacement-index`
-- Primary deployment branch: `cf-deployment`
-
-## Design Direction (V1 Editorial — chosen Feb 23)
-
-- **Light/warm theme** — parchment background (#F4F1EB), cream surfaces, warm tones
-- **Typography:** Fraunces (serif headlines, 900 weight), DM Sans (body), JetBrains Mono (data/labels)
-- **Accent:** amber/brown (#B45309) — warm, authoritative, NOT crypto/fintwit
-- **Layout:** editorial magazine feel — generous whitespace, clear hierarchy, 1000px max-width
-- **Chain visualization:** numbered cards in a vertical list with status badges (green/amber/red pills)
-- **Ghost GDP:** featured section with comparative bar chart + gap score
-- **Detail tables:** grouped by chain link, showing FRED series IDs for transparency
-- **Status system:** colored pills with dots — Normal (green), Elevated (amber), Warning (orange), Critical (red)
-- **Mobile-first** — responsive grid, hides secondary data on small screens
-- **Reference file:** `mockups/v1-editorial.html`
-
-## Content Strategy
-
-- **Launch post:** Thread on X explaining the thesis + linking to the site
-- **Weekly cadence:** New data → updated dashboard → newsletter → X thread
-- **Evergreen:** "How to read this dashboard" explainer page
-- **Commentary:** Brief editorial on each update (what moved, why it matters)
+1. Optional GitHub → Cloudflare automatic deploy on push (vs manual `wrangler deploy`)
+2. Optional historical storage (R2/D1) for long-term charting
+3. Optional recovery notification (`becomes healthy`) in Cloudflare
+4. Newsletter integration (v2)
 
 ## Decisions Made
 
-- [x] Name: **The Displacement Index** (displacementindex.com)
-- [x] X strategy: post from @simonhimself
-- [x] Newsletter: v2 (not MVP)
-- [x] Design direction: V1 Editorial (light/warm, media-credible)
-- [x] Voice: clinical observer (site), provocative angle lives in Simon’s X posts
-- [x] Repo: public (GitHub)
-- [x] Deployment: Cloudflare Workers + Static Assets + Cron + KV (self-updating)
-- [ ] Domain purchase + custom domain routing
+- [x] Brand + domain: The Displacement Index / displacementindex.com
+- [x] Cloudflare-native deployment (Workers + Assets + KV + Cron)
+- [x] Public GitHub repo for transparency
+- [x] V1 Editorial design direction
+- [x] Site voice: neutral/clinical, data-first
+- [x] Newsletter deferred to v2

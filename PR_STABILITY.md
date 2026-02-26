@@ -18,3 +18,4 @@ Goal: make Cloudflare auto-refresh resilient, observable, and safe under partial
 ## Notes
 - No behavior/product changes to methodology or scoring.
 - Keep API contracts backward-compatible where possible.
+- Implemented on `feat-stability`, then merged into `main`.
