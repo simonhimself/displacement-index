@@ -1,5 +1,6 @@
 {
   "name": "displacement-index",
+  "account_id": "2423947c3898625c52d1d37070dffd03",
   "main": "src/worker.ts",
   "compatibility_date": "2026-02-26",
   "assets": {
@@ -12,8 +13,8 @@
   "kv_namespaces": [
     {
       "binding": "DI_KV",
-      "id": "__KV_ID__",
-      "preview_id": "__KV_PREVIEW_ID__"
+      "id": "77c5ff6c935747fd99c82b7cc6128a9c",
+      "preview_id": "e5ba42a39ac34af2a8aa31298611b1df"
     }
   ],
   "vars": {
