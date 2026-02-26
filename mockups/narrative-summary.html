@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup: Dynamic Narrative Summary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F4F1EB;
+    --surface: #FFFEF9;
+    --text: #1C1917;
+    --text-secondary: #78716C;
+    --text-tertiary: #A8A29E;
+    --border: #D6D3CD;
+    --border-light: #E7E5DF;
+    --accent: #B45309;
+    --normal-dot: #22C55E;
+    --elevated-dot: #F59E0B;
+    --warning-dot: #F97316;
+    --critical-dot: #EF4444;
+  }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3rem;
+  }
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 1.5rem;
+  }
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text);
+  }
+
+  /* ---- COMPOSITE SCORE (existing context) ---- */
+  .score-block {
+    text-align: center;
+    padding: 2rem 0 1rem;
+  }
+  .score-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 0.5rem;
+  }
+  .score-number {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 5rem;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--text);
+    display: inline;
+  }
+  .score-of {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    color: var(--text-tertiary);
+    display: inline;
+    vertical-align: super;
+    margin-left: 0.2rem;
+  }
+  .score-meter {
+    height: 6px;
+    background: var(--border-light);
+    border-radius: 99px;
+    margin: 1rem auto 0.3rem;
+    width: 260px;
+    overflow: hidden;
+  }
+  .score-meter-fill {
+    height: 100%;
+    width: 10%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #22C55E, #F59E0B);
+  }
+  .score-meter-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 260px;
+    margin: 0 auto;
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ---- THE NARRATIVE SUMMARY — "The Briefing" ---- */
+  .briefing {
+    max-width: 640px;
+    width: 100%;
+    position: relative;
+  }
+  .briefing-card {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 16px;
+    padding: 1.6rem 1.8rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .briefing-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    border-radius: 16px 0 0 16px;
+    background: linear-gradient(180deg, #22C55E 0%, #F59E0B 50%, #F97316 100%);
+  }
+  .briefing-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .briefing-eyebrow .pulse {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22C55E;
+    display: inline-block;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .briefing-text {
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--text);
+  }
+  .briefing-text strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .briefing-text .hl-normal {
+    color: #166534;
+    font-weight: 600;
+  }
+  .briefing-text .hl-warning {
+    color: #9A3412;
+    font-weight: 600;
+  }
+  .briefing-text .hl-critical {
+    color: #991B1B;
+    font-weight: 600;
+  }
+  .briefing-footer {
+    margin-top: 0.8rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-tertiary);
+  }
+
+  /* ---- VARIANT B: Quote-style ---- */
+  .briefing-quote {
+    max-width: 640px;
+    width: 100%;
+  }
+  .briefing-quote-inner {
+    background: transparent;
+    border-left: 3px solid var(--accent);
+    padding: 0.4rem 0 0.4rem 1.4rem;
+  }
+  .briefing-quote-inner .briefing-eyebrow {
+    color: var(--accent);
+  }
+  .briefing-quote-inner .briefing-text {
+    font-family: 'Fraunces', serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+  .briefing-quote-inner .briefing-text strong {
+    font-style: normal;
+    color: var(--text);
+  }
+
+  /* ---- VARIANT C: Ticker-tape / status-line ---- */
+  .briefing-ticker {
+    max-width: 700px;
+    width: 100%;
+    background: var(--text);
+    border-radius: 10px;
+    padding: 0.9rem 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .ticker-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #22C55E;
+    flex-shrink: 0;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .ticker-text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem;
+    color: #E7E5DF;
+    line-height: 1.55;
+  }
+  .ticker-text strong {
+    color: #FFFEF9;
+    font-weight: 600;
+  }
+
+  .section-divider {
+    width: 100%;
+    max-width: 700px;
+    border: none;
+    border-top: 1px dashed var(--border);
+    margin: 1rem 0;
+  }
+
+  .note {
+    max-width: 500px;
+    text-align: center;
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    line-height: 1.6;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="label">Mockup: Dynamic Narrative Summary — 3 variants</div>
+
+<!-- ============================================ -->
+<!-- CONTEXT: Composite score above (for reference) -->
+<!-- ============================================ -->
+<div class="score-block">
+  <div class="score-eyebrow">Composite Score</div>
+  <div>
+    <span class="score-number">10</span><span class="score-of">/100</span>
+  </div>
+  <div class="score-meter"><div class="score-meter-fill"></div></div>
+  <div class="score-meter-labels"><span>Normal</span><span>Critical</span></div>
+</div>
+
+<!-- ============================================ -->
+<!-- VARIANT A: Card with gradient left border -->
+<!-- ============================================ -->
+<h2>Variant A — The Briefing Card</h2>
+<p class="note">A dedicated card that visually stands out from the data sections. Left gradient border encodes overall chain health at a glance.</p>
+
+<div class="briefing">
+  <div class="briefing-card">
+    <div class="briefing-eyebrow"><span class="pulse"></span> The Briefing</div>
+    <div class="briefing-text">
+      The Displacement Index sits at <strong>10 / 100</strong> — <span class="hl-normal">normal range</span>. Most chain links show no activation. The notable exception: <span class="hl-warning">credit spreads are elevated</span>, with high-yield and CCC spreads above their 5-year trend. Historically, sustained credit stress without improvement in employment signals has preceded broader economic deterioration. White-collar job postings remain significantly below pre-pandemic levels, but this hasn't yet translated into rising unemployment.
+    </div>
+    <div class="briefing-footer">Auto-generated from latest data · Feb 26, 2026</div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================ -->
+<!-- VARIANT B: Editorial pull-quote -->
+<!-- ============================================ -->
+<h2>Variant B — Editorial Pull Quote</h2>
+<p class="note">Lighter weight. Reads like an editorial margin note. The italic serif gives it a different texture from the data-heavy body.</p>
+
+<div class="briefing-quote">
+  <div class="briefing-quote-inner">
+    <div class="briefing-eyebrow"><span class="pulse"></span> The Briefing</div>
+    <div class="briefing-text">
+      At <strong>10 / 100</strong>, the displacement chain is quiet. Credit spreads are the canary — elevated but isolated. Job postings in software and media sit 29–35% below pre-COVID peaks, but unemployment hasn't followed. The chain isn't firing. Yet.
+    </div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================ -->
+<!-- VARIANT C: Dark ticker bar -->
+<!-- ============================================ -->
+<h2>Variant C — Status Ticker</h2>
+<p class="note">Compact, high-contrast. Sits between the score and the chain overview. Like a "current status" bar you'd see on a monitoring dashboard.</p>
+
+<div class="briefing-ticker">
+  <span class="ticker-dot"></span>
+  <div class="ticker-text">
+    <strong>DI 10/100 · Normal.</strong> Credit spreads elevated (z=1.53). White-collar postings depressed but unemployment flat. No chain activation detected.
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<p class="note" style="margin-top: 1rem;">
+  All three variants would be dynamically generated from the /api/indicators data.<br>
+  The text updates automatically every 6 hours when the cron refreshes.<br>
+  Recommended placement: directly below the composite score, above the chain overview.
+</p>
+
+</body>
+</html>
