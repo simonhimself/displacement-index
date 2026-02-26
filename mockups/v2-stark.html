@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Displacement Index</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #FDFDFD;
+    --text: #0A0A0A;
+    --text-mid: #525252;
+    --text-light: #A3A3A3;
+    --border: #E5E5E5;
+    --surface: #FAFAFA;
+
+    --green: #059669;
+    --green-bg: #ECFDF5;
+    --amber: #D97706;
+    --amber-bg: #FFFBEB;
+    --red: #DC2626;
+    --red-bg: #FEF2F2;
+  }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* HEADER — big, stark, newspaper-like */
+  .header {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 0;
+  }
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-weight: 800;
+    font-size: 0.95rem;
+    letter-spacing: -0.04em;
+  }
+  .header-nav {
+    display: flex;
+    gap: 1.75rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-mid);
+  }
+  .header-nav a { color: inherit; text-decoration: none; }
+  .header-nav a:hover { color: var(--text); }
+
+  .header-date {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.75rem 0;
+    border-bottom: 3px double var(--text);
+  }
+
+  /* HERO — enormous score, stark */
+  .hero {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 3.5rem 2rem 3rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: end;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-left {}
+  .hero-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-light);
+    margin-bottom: 0.75rem;
+  }
+  .hero-score {
+    font-size: 9rem;
+    font-weight: 800;
+    line-height: 0.85;
+    letter-spacing: -0.06em;
+    margin-bottom: 0.25rem;
+  }
+  .hero-of {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    border-radius: 100px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .hero-status.normal { background: var(--green-bg); color: var(--green); }
+  .hero-status.elevated { background: var(--amber-bg); color: var(--amber); }
+  .hero-status .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .hero-right {
+    padding-bottom: 0.5rem;
+  }
+  .hero-right h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+  }
+  .hero-right p {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--text-mid);
+  }
+
+  /* CHAIN — horizontal strip */
+  .chain-strip {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .chain-cell {
+    padding: 1.5rem 1.25rem;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+  .chain-cell:last-child { border-right: none; }
+
+  .chain-cell-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+  }
+  .chain-cell-name {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.75rem;
+    line-height: 1.3;
+  }
+
+  .chain-cell-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.25rem;
+  }
+  .chain-cell-series {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-light);
+    margin-bottom: 0.75rem;
+  }
+
+  .chain-cell-status {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .chain-cell-status .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .status-normal { color: var(--green); }
+  .status-normal .dot { background: var(--green); }
+  .status-elevated { color: var(--amber); }
+  .status-elevated .dot { background: var(--amber); }
+  .status-warning { color: #EA580C; }
+  .status-warning .dot { background: #EA580C; }
+
+  /* GHOST GDP */
+  .ghost-section {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .ghost-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 2rem;
+  }
+  .ghost-title h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  .ghost-title span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .ghost-layout {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    gap: 3rem;
+    align-items: center;
+  }
+
+  .ghost-bar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .ghost-bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.4rem;
+  }
+  .ghost-bar-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-mid);
+  }
+  .ghost-bar-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+  .ghost-bar-track {
+    height: 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .ghost-bar-fill {
+    height: 100%;
+  }
+  .ghost-bar-fill.prod { background: var(--text); }
+  .ghost-bar-fill.wage { background: var(--text-light); }
+
+  .ghost-score-block {
+    text-align: center;
+  }
+  .ghost-score-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+  }
+  .ghost-score-num {
+    font-size: 4rem;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    color: var(--green);
+  }
+  .ghost-score-desc {
+    font-size: 0.72rem;
+    color: var(--text-light);
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+
+  /* DETAIL SECTION */
+  .detail-section {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 2rem;
+  }
+  .detail-header h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .detail-table-full {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .detail-table-full thead th {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-light);
+    text-align: left;
+    padding: 0 0 0.75rem;
+    border-bottom: 2px solid var(--text);
+  }
+  .detail-table-full tbody td {
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.82rem;
+    vertical-align: middle;
+  }
+  .detail-table-full .indicator-name {
+    font-weight: 600;
+  }
+  .detail-table-full .indicator-chain {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    margin-top: 0.15rem;
+  }
+  .detail-table-full .mono {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+  .detail-table-full .mono-light {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-mid);
+  }
+  .detail-table-full .freq {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-light);
+  }
+
+  /* METHODOLOGY */
+  .method-section {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+  .method-section h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.25rem;
+  }
+  .method-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+  }
+  .method-columns p {
+    font-size: 0.85rem;
+    line-height: 1.75;
+    color: var(--text-mid);
+  }
+
+  /* FOOTER */
+  footer {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem;
+    border-top: 3px double var(--text);
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  footer a { color: var(--text-mid); text-decoration: none; }
+
+  @media (max-width: 768px) {
+    .hero { grid-template-columns: 1fr; gap: 2rem; }
+    .hero-score { font-size: 6rem; }
+    .chain-strip { grid-template-columns: 1fr; }
+    .chain-cell { border-right: none; border-bottom: 1px solid var(--border); }
+    .ghost-layout { grid-template-columns: 1fr; }
+    .method-columns { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">The Displacement Index</div>
+    <div class="header-nav">
+      <a href="#">Dashboard</a>
+      <a href="#">Methodology</a>
+      <a href="#">About</a>
+      <a href="#">GitHub ↗</a>
+    </div>
+  </div>
+  <div class="header-date">February 23, 2026 · Federal Reserve Economic Data · Bureau of Labor Statistics</div>
+</div>
+
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-label">Composite Score</div>
+    <div class="hero-score">5</div>
+    <div class="hero-of">/100</div>
+    <div class="hero-status normal">
+      <span class="pulse"></span>
+      Normal — no displacement signals detected
+    </div>
+  </div>
+  <div class="hero-right">
+    <h1>Is AI prosperity reaching the real economy?</h1>
+    <p>Five linked economic indicators tracking whether AI-driven productivity translates into broad prosperity — or hollows out the economy through white-collar displacement, spending collapse, and credit stress.</p>
+  </div>
+</section>
+
+<div class="chain-strip">
+  <div class="chain-cell">
+    <div class="chain-cell-num">01</div>
+    <div class="chain-cell-name">White-Collar Displacement</div>
+    <div class="chain-cell-value">4.5%</div>
+    <div class="chain-cell-series">Prof/Biz Services UE</div>
+    <div class="chain-cell-status status-normal"><span class="dot"></span> Normal</div>
+  </div>
+  <div class="chain-cell">
+    <div class="chain-cell-num">02</div>
+    <div class="chain-cell-name">Consumer Spending</div>
+    <div class="chain-cell-value">56.4</div>
+    <div class="chain-cell-series">UMich Sentiment</div>
+    <div class="chain-cell-status status-normal"><span class="dot"></span> Normal</div>
+  </div>
+  <div class="chain-cell">
+    <div class="chain-cell-num">03</div>
+    <div class="chain-cell-name">Ghost GDP</div>
+    <div class="chain-cell-value">+0.57</div>
+    <div class="chain-cell-series">Productivity–Wage Gap</div>
+    <div class="chain-cell-status status-normal"><span class="dot"></span> Normal</div>
+  </div>
+  <div class="chain-cell">
+    <div class="chain-cell-num">04</div>
+    <div class="chain-cell-name">Credit Stress</div>
+    <div class="chain-cell-value">2.86%</div>
+    <div class="chain-cell-series">HY OAS Spread</div>
+    <div class="chain-cell-status status-elevated"><span class="dot"></span> Elevated</div>
+  </div>
+  <div class="chain-cell">
+    <div class="chain-cell-num">05</div>
+    <div class="chain-cell-name">Mortgage Stress</div>
+    <div class="chain-cell-value">1.78%</div>
+    <div class="chain-cell-series">SF Delinquency Rate</div>
+    <div class="chain-cell-status status-normal"><span class="dot"></span> Normal</div>
+  </div>
+</div>
+
+<!-- GHOST GDP -->
+<section class="ghost-section">
+  <div class="ghost-title">
+    <h2>Ghost GDP</h2>
+    <span>Featured Indicator</span>
+  </div>
+  <div class="ghost-layout">
+    <div class="ghost-bar-group">
+      <div>
+        <div class="ghost-bar-header">
+          <span class="ghost-bar-label">Productivity Growth (YoY)</span>
+          <span class="ghost-bar-num">+1.92%</span>
+        </div>
+        <div class="ghost-bar-track">
+          <div class="ghost-bar-fill prod" style="width: 64%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="ghost-bar-header">
+          <span class="ghost-bar-label">Real Wage Growth (YoY)</span>
+          <span class="ghost-bar-num" style="color:var(--text-light)">+1.35%</span>
+        </div>
+        <div class="ghost-bar-track">
+          <div class="ghost-bar-fill wage" style="width: 45%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="ghost-score-block">
+      <div class="ghost-score-label">The Gap</div>
+      <div class="ghost-score-num">0.57</div>
+      <div class="ghost-score-desc">Normal range.<br>Widening = Ghost GDP.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ALL INDICATORS TABLE -->
+<section class="detail-section">
+  <div class="detail-header">
+    <h2>All Indicators</h2>
+  </div>
+  <table class="detail-table-full">
+    <thead>
+      <tr>
+        <th style="width:30%">Indicator</th>
+        <th>Chain Link</th>
+        <th>Value</th>
+        <th>Z-Score</th>
+        <th>Frequency</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><div class="indicator-name">Prof & Business Services UE</div><div class="indicator-chain">LNU04032239</div></td>
+        <td>Displacement</td>
+        <td class="mono">4.5%</td>
+        <td class="mono-light">+0.52</td>
+        <td class="freq">Monthly</td>
+        <td><span class="chain-cell-status status-elevated" style="font-size:0.7rem"><span class="dot"></span> Elevated</span></td>
+      </tr>
+      <tr>
+        <td><div class="indicator-name">Information Industry UE</div><div class="indicator-chain">LNU04032237</div></td>
+        <td>Displacement</td>
+        <td class="mono">5.0%</td>
+        <td class="mono-light">+0.64</td>
+        <td class="freq">Monthly</td>
+        <td><span class="chain-cell-status status-elevated" style="font-size:0.7rem"><span class="dot"></span> Elevated</span></td>
+      </tr>
+      <tr>
+        <td><div class="indicator-name">Prof/Sci/Tech Employment</div><div class="indicator-chain">CES6054000001</div></td>
+        <td>Displacement</td>
+        <td class="mono">10,815K</td>
+        <td class="mono-light">+0.73</td>
+        <td class="freq">Monthly</td>
+        <td><span class="chain-cell-status status-normal" style="font-size:0.7rem"><span class="dot"></span> Normal</span></td>
+      </tr>
+      <tr>
+        <td><div class="indicator-name">Real Personal Consumption</div><div class="indicator-chain">PCEC96</div></td>
+        <td>Spending</td>
+        <td class="mono">$16.7T</td>
+        <td class="mono-light">+1.67</td>
+        <td class="freq">Monthly</td>
+        <td><span class="chain-cell-status status-normal" style="font-size:0.7rem"><span class="dot"></span> Normal</span></td>
+      </tr>
+      <tr>
+        <td><div class="indicator-name">Consumer Sentiment</div><div class="indicator-chain">UMCSENT</div></td>
+        <td>Spending</td>
+        <td class="mono">56.4</td>
+        <td class="mono-light">−1.04</td>
+        <td class="freq">Monthly</td>
+        <td><span class="chain-cell-status status-warning" style="font-size:0.7rem"><span class="dot"></span> Warning</span></td>
+      </tr>
+      <tr>
+        <td><div class="indicator-name">Retail Sales</div><div class="indicator-chain">RSAFS</div></td>
+        <td>Spending</td>
+        <td class="mono">$735B</td>
+        <td class="mono-light">+1.47</td>
+        <td class="freq">Monthly</td>
+        <td><span class="chain-cell-status status-normal" style="font-size:0.7rem"><span class="dot"></span> Normal</span></td>
+      </tr>
+      <tr>
+        <td><div class="indicator-name">HY Credit Spreads</div><div class="indicator-chain">BAMLH0A0HYM2</div></td>
+        <td>Credit</td>
+        <td class="mono">2.86%</td>
+        <td class="mono-light">+0.45</td>
+        <td class="freq">Daily</td>
+        <td><span class="chain-cell-status status-normal" style="font-size:0.7rem"><span class="dot"></span> Normal</span></td>
+      </tr>
+      <tr>
+        <td><div class="indicator-name">CCC & Lower Spreads</div><div class="indicator-chain">BAMLH0A3HYC</div></td>
+        <td>Credit</td>
+        <td class="mono">8.87%</td>
+        <td class="mono-light">+1.06</td>
+        <td class="freq">Daily</td>
+        <td><span class="chain-cell-status status-warning" style="font-size:0.7rem"><span class="dot"></span> Warning</span></td>
+      </tr>
+      <tr>
+        <td><div class="indicator-name">Consumer Loan Delinquency</div><div class="indicator-chain">DRCLACBS</div></td>
+        <td>Credit</td>
+        <td class="mono">2.72%</td>
+        <td class="mono-light">+0.50</td>
+        <td class="freq">Quarterly</td>
+        <td><span class="chain-cell-status status-elevated" style="font-size:0.7rem"><span class="dot"></span> Elevated</span></td>
+      </tr>
+      <tr>
+        <td><div class="indicator-name">SF Mortgage Delinquency</div><div class="indicator-chain">DRSFRMACBS</div></td>
+        <td>Mortgage</td>
+        <td class="mono">1.78%</td>
+        <td class="mono-light">−0.51</td>
+        <td class="freq">Quarterly</td>
+        <td><span class="chain-cell-status status-normal" style="font-size:0.7rem"><span class="dot"></span> Normal</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- METHODOLOGY -->
+<section class="method-section">
+  <h2>Methodology</h2>
+  <div class="method-columns">
+    <p>The Displacement Index tracks a specific economic hypothesis: that rapid AI capability gains could trigger a chain reaction through white-collar labor markets, consumer spending, credit markets, and housing. We track five sequential chain links, each scored against 5-year historical distributions using z-scores.</p>
+    <p>A reading above 0.5σ is <strong>elevated</strong>, above 1.0σ is <strong>warning</strong>, above 2.0σ is <strong>critical</strong>. The composite index maps the average chain link severity to a 0–100 scale. All data sourced from FRED and BLS. Credit spreads update daily; employment monthly; delinquencies quarterly.</p>
+  </div>
+</section>
+
+<footer>
+  <span>The Displacement Index · Not Financial Advice</span>
+  <span><a href="#">Methodology</a> · <a href="#">GitHub ↗</a> · <a href="#">Data: FRED & BLS</a></span>
+</footer>
+
+</body>
+</html>

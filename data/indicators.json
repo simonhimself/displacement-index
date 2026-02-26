@@ -1,0 +1,117 @@
+{
+  "generated_at": "2026-02-26T13:50:39.201563Z",
+  "fred_fetched_at": "2026-02-26T13:50:20.930517Z",
+  "composite_index": {
+    "value": 10.0,
+    "scale": "0-100 (0=all normal, 100=all critical)",
+    "chain_link_statuses": {
+      "normal": 4,
+      "warning": 1
+    },
+    "interpretation": "Normal: No significant displacement signals detected"
+  },
+  "derived_indicators": {
+    "ghost_gdp": {
+      "name": "Ghost GDP Score",
+      "description": "Productivity growth minus real wage growth. Positive = output not reaching workers.",
+      "value": 0.57,
+      "components": {
+        "productivity_yoy_pct": 1.92,
+        "real_wage_yoy_pct": 1.35
+      },
+      "status": "normal"
+    },
+    "displacement_velocity": {
+      "name": "Displacement Velocity",
+      "description": "White-collar unemployment change relative to overall. >1 = white-collar deteriorating faster.",
+      "value": -2.9,
+      "components": {
+        "prof_biz_3mo_change_pct": 15.38,
+        "info_3mo_change_pct": -28.57,
+        "overall_3mo_change_pct": -2.27
+      },
+      "status": "normal"
+    }
+  },
+  "chain_links": {
+    "displacement": {
+      "name": "White-Collar Displacement",
+      "status": "normal",
+      "z_score": 0.14,
+      "indicators": {
+        "LNU04032239": {
+          "z": 0.52,
+          "status": "elevated"
+        },
+        "LNU04032237": {
+          "z": 0.64,
+          "status": "elevated"
+        },
+        "CES6054000001": {
+          "z": 0.73,
+          "status": "normal"
+        }
+      }
+    },
+    "spending": {
+      "name": "Consumer Spending",
+      "status": "normal",
+      "z_score": -0.7,
+      "indicators": {
+        "PCEC96": {
+          "z": 1.67,
+          "status": "normal"
+        },
+        "UMCSENT": {
+          "z": -1.04,
+          "status": "warning"
+        },
+        "RSAFS": {
+          "z": 1.47,
+          "status": "normal"
+        }
+      }
+    },
+    "ghost_gdp": {
+      "name": "Ghost GDP",
+      "status": "normal",
+      "z_score": -1.11,
+      "indicators": {
+        "M2V": {
+          "z": 1.11,
+          "status": "normal"
+        }
+      }
+    },
+    "credit_stress": {
+      "name": "Credit Stress",
+      "status": "warning",
+      "z_score": 1.53,
+      "indicators": {
+        "BAMLH0A0HYM2": {
+          "z": 1.5,
+          "status": "warning"
+        },
+        "BAMLH0A3HYC": {
+          "z": 2.34,
+          "status": "critical"
+        },
+        "DRCLACBS": {
+          "z": 0.75,
+          "status": "elevated"
+        }
+      }
+    },
+    "mortgage_stress": {
+      "name": "Mortgage & Housing Stress",
+      "status": "normal",
+      "z_score": -0.49,
+      "indicators": {
+        "DRSFRMACBS": {
+          "z": -0.49,
+          "status": "normal"
+        }
+      }
+    }
+  }
+}

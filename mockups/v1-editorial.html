@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Displacement Index</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #F4F1EB;
+    --surface: #FFFEF9;
+    --text: #1C1917;
+    --text-secondary: #78716C;
+    --text-tertiary: #A8A29E;
+    --border: #D6D3CD;
+    --border-light: #E7E5DF;
+    --accent: #B45309;
+    --accent-light: #FEF3C7;
+
+    --normal-bg: #F0FDF4;
+    --normal-text: #166534;
+    --normal-dot: #22C55E;
+    --elevated-bg: #FFFBEB;
+    --elevated-text: #92400E;
+    --elevated-dot: #F59E0B;
+    --warning-bg: #FFF7ED;
+    --warning-text: #9A3412;
+    --warning-dot: #F97316;
+    --critical-bg: #FEF2F2;
+    --critical-text: #991B1B;
+    --critical-dot: #EF4444;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* NAV */
+  nav {
+    padding: 1.25rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .nav-logo {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  .nav-logo span { color: var(--accent); }
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+  .nav-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  /* HERO */
+  .hero {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 5rem 2rem 3.5rem;
+  }
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 1.25rem;
+  }
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 3.8rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    margin-bottom: 1.5rem;
+    max-width: 700px;
+  }
+  .hero .subtitle {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    max-width: 560px;
+    line-height: 1.65;
+    font-weight: 400;
+  }
+
+  /* COMPOSITE */
+  .composite {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 2rem 4rem;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .score-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .score-block::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--normal-dot);
+  }
+  .score-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+    margin-bottom: 1rem;
+  }
+  .score-number {
+    font-family: 'Fraunces', serif;
+    font-size: 5.5rem;
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.15rem;
+  }
+  .score-of {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    margin-bottom: 1.25rem;
+  }
+
+  .score-meter {
+    height: 4px;
+    background: var(--border-light);
+    border-radius: 2px;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+  }
+  .score-meter-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--normal-dot);
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .score-meter-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    margin-bottom: 1.5rem;
+  }
+
+  .score-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.3rem 0.75rem;
+    border-radius: 100px;
+  }
+  .badge-normal { background: var(--normal-bg); color: var(--normal-text); }
+  .badge-elevated { background: var(--elevated-bg); color: var(--elevated-text); }
+  .badge-warning { background: var(--warning-bg); color: var(--warning-text); }
+
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  .score-updated {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-tertiary);
+    margin-top: 1.25rem;
+    line-height: 1.5;
+  }
+
+  /* CHAIN OVERVIEW */
+  .chain-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .chain-item {
+    padding: 1.25rem 1.5rem;
+    display: grid;
+    grid-template-columns: 32px 1fr auto auto;
+    gap: 1rem;
+    align-items: center;
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.15s;
+  }
+  .chain-item:last-child { border-bottom: none; }
+  .chain-item:hover { background: rgba(0,0,0,0.015); }
+
+  .chain-num {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-tertiary);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--bg);
+  }
+
+  .chain-label h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.1rem;
+    letter-spacing: -0.01em;
+  }
+  .chain-label p {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .chain-value {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .chain-value small {
+    display: block;
+    font-size: 0.6rem;
+    color: var(--text-tertiary);
+    font-weight: 400;
+    margin-top: 0.1rem;
+  }
+
+  /* CONNECTOR */
+  .chain-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-bottom: 1px solid var(--border-light);
+    height: 24px;
+  }
+  .chain-connector svg { width: 12px; height: 12px; color: var(--text-tertiary); opacity: 0.4; }
+
+  /* GHOST GDP SECTION */
+  .section {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 2rem 4rem;
+  }
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--text);
+  }
+  .section-header h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  .section-header .section-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+  }
+
+  .ghost-grid {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 2rem;
+  }
+
+  .ghost-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .ghost-bar-row {}
+  .ghost-bar-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.5rem;
+  }
+  .ghost-bar-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .ghost-bar-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .ghost-track {
+    height: 32px;
+    background: var(--border-light);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .ghost-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .ghost-fill.productivity { background: var(--accent); }
+  .ghost-fill.wages { background: #57534E; }
+
+  .ghost-gap-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .ghost-gap-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-tertiary);
+    margin-bottom: 0.5rem;
+  }
+  .ghost-gap-value {
+    font-family: 'Fraunces', serif;
+    font-size: 3rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    color: var(--normal-text);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .ghost-gap-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* DETAILS GRID */
+  .details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .detail-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .detail-card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .detail-card-header h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .detail-table {
+    width: 100%;
+    font-size: 0.82rem;
+  }
+  .detail-table th {
+    text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    padding: 0.75rem 1.25rem 0.5rem;
+  }
+  .detail-table td {
+    padding: 0.6rem 1.25rem;
+    border-top: 1px solid var(--border-light);
+    vertical-align: middle;
+  }
+  .detail-table .name {
+    font-weight: 500;
+  }
+  .detail-table .series {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+  }
+  .detail-table .mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  /* METHODOLOGY */
+  .methodology {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 3rem 2rem 4rem;
+    border-top: 2px solid var(--text);
+  }
+  .methodology h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.25rem;
+  }
+  .methodology p {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.75;
+    margin-bottom: 1rem;
+    max-width: 640px;
+  }
+
+  /* FOOTER */
+  footer {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--text-secondary); text-decoration: none; }
+
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 2.5rem; }
+    .composite { grid-template-columns: 1fr; }
+    .ghost-grid { grid-template-columns: 1fr; }
+    .details-grid { grid-template-columns: 1fr; }
+    .chain-item { grid-template-columns: 32px 1fr auto; }
+    .chain-value { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">The Displacement <span>Index</span></div>
+  <div class="nav-links">
+    <a href="#">Dashboard</a>
+    <a href="#">Methodology</a>
+    <a href="#">About</a>
+    <a href="#">GitHub ↗</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-eyebrow">Economic Indicator · Updated Feb 23, 2026</div>
+  <h1>Is AI prosperity reaching the real economy?</h1>
+  <p class="subtitle">We track five linked economic signals to measure whether AI-driven productivity gains are translating into broad prosperity — or hollowing out the economy from the inside.</p>
+</section>
+
+<section class="composite">
+  <div class="score-block">
+    <div class="score-eyebrow">Composite Score</div>
+    <div class="score-number">5</div>
+    <div class="score-of">/100</div>
+    <div class="score-meter">
+      <div class="score-meter-fill" style="width: 5%"></div>
+    </div>
+    <div class="score-meter-labels">
+      <span>Normal</span>
+      <span>Critical</span>
+    </div>
+    <div class="score-badge badge-normal">
+      <span class="badge-dot" style="background:var(--normal-dot)"></span>
+      Normal
+    </div>
+    <div class="score-updated">
+      Sources: FRED, BLS<br>
+      Last data: 2026-02-20
+    </div>
+  </div>
+
+  <div class="chain-overview">
+    <div class="chain-item">
+      <div class="chain-num">1</div>
+      <div class="chain-label">
+        <h3>White-Collar Displacement</h3>
+        <p>Professional & technical sector unemployment</p>
+      </div>
+      <div class="chain-value">4.5%<small>Prof/Biz UE</small></div>
+      <div class="score-badge badge-normal" style="font-size:0.7rem"><span class="badge-dot" style="background:var(--normal-dot)"></span> Normal</div>
+    </div>
+
+    <div class="chain-item">
+      <div class="chain-num">2</div>
+      <div class="chain-label">
+        <h3>Consumer Spending</h3>
+        <p>Real consumption, sentiment & retail</p>
+      </div>
+      <div class="chain-value">56.4<small>UMich Sent.</small></div>
+      <div class="score-badge badge-normal" style="font-size:0.7rem"><span class="badge-dot" style="background:var(--normal-dot)"></span> Normal</div>
+    </div>
+
+    <div class="chain-item">
+      <div class="chain-num">3</div>
+      <div class="chain-label">
+        <h3>Ghost GDP</h3>
+        <p>Productivity vs wage growth divergence</p>
+      </div>
+      <div class="chain-value">+0.57<small>Ghost Score</small></div>
+      <div class="score-badge badge-normal" style="font-size:0.7rem"><span class="badge-dot" style="background:var(--normal-dot)"></span> Normal</div>
+    </div>
+
+    <div class="chain-item">
+      <div class="chain-num">4</div>
+      <div class="chain-label">
+        <h3>Credit Stress</h3>
+        <p>High-yield spreads & delinquencies</p>
+      </div>
+      <div class="chain-value">2.86%<small>HY OAS</small></div>
+      <div class="score-badge badge-elevated" style="font-size:0.7rem"><span class="badge-dot" style="background:var(--elevated-dot)"></span> Elevated</div>
+    </div>
+
+    <div class="chain-item">
+      <div class="chain-num">5</div>
+      <div class="chain-label">
+        <h3>Mortgage Stress</h3>
+        <p>Residential mortgage delinquencies</p>
+      </div>
+      <div class="chain-value">1.78%<small>Delinq. Rate</small></div>
+      <div class="score-badge badge-normal" style="font-size:0.7rem"><span class="badge-dot" style="background:var(--normal-dot)"></span> Normal</div>
+    </div>
+  </div>
+</section>
+
+<!-- GHOST GDP -->
+<section class="section">
+  <div class="section-header">
+    <h2>Ghost GDP</h2>
+    <span class="section-badge">Featured Indicator</span>
+  </div>
+  <div class="ghost-grid">
+    <div class="ghost-bars">
+      <div class="ghost-bar-row">
+        <div class="ghost-bar-meta">
+          <span class="ghost-bar-name">Productivity Growth (YoY)</span>
+          <span class="ghost-bar-value" style="color:var(--accent)">+1.92%</span>
+        </div>
+        <div class="ghost-track">
+          <div class="ghost-fill productivity" style="width: 64%"></div>
+        </div>
+      </div>
+      <div class="ghost-bar-row">
+        <div class="ghost-bar-meta">
+          <span class="ghost-bar-name">Real Wage Growth (YoY)</span>
+          <span class="ghost-bar-value">+1.35%</span>
+        </div>
+        <div class="ghost-track">
+          <div class="ghost-fill wages" style="width: 45%"></div>
+        </div>
+      </div>
+      <p style="font-size:0.82rem; color:var(--text-secondary); line-height:1.65; margin-top:0.5rem;">When productivity grows but wages don't follow, output appears in GDP but never reaches workers. A persistent and widening gap would signal the emergence of "Ghost GDP" — growth that exists on paper but not in people's lives.</p>
+    </div>
+    <div class="ghost-gap-card">
+      <div class="ghost-gap-label">The Gap</div>
+      <div class="ghost-gap-value">0.57</div>
+      <div class="ghost-gap-desc">Within normal range.<br>Watch for persistent widening.</div>
+    </div>
+  </div>
+</section>
+
+<!-- DETAILED BREAKDOWNS -->
+<section class="section">
+  <div class="section-header">
+    <h2>Indicator Detail</h2>
+    <span class="section-badge">All Data Points</span>
+  </div>
+  <div class="details-grid">
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <h3>Displacement</h3>
+        <span class="score-badge badge-normal" style="font-size:0.65rem"><span class="badge-dot" style="background:var(--normal-dot)"></span> Normal</span>
+      </div>
+      <table class="detail-table">
+        <tr><th>Indicator</th><th>Value</th><th>Z</th></tr>
+        <tr>
+          <td><span class="name">Prof & Biz Services UE</span><br><span class="series">LNU04032239</span></td>
+          <td class="mono">4.5%</td>
+          <td class="mono">+0.52</td>
+        </tr>
+        <tr>
+          <td><span class="name">Information Industry UE</span><br><span class="series">LNU04032237</span></td>
+          <td class="mono">5.0%</td>
+          <td class="mono">+0.64</td>
+        </tr>
+        <tr>
+          <td><span class="name">Prof/Sci/Tech Employment</span><br><span class="series">CES6054000001</span></td>
+          <td class="mono">10,815K</td>
+          <td class="mono">+0.73</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <h3>Consumer Spending</h3>
+        <span class="score-badge badge-normal" style="font-size:0.65rem"><span class="badge-dot" style="background:var(--normal-dot)"></span> Normal</span>
+      </div>
+      <table class="detail-table">
+        <tr><th>Indicator</th><th>Value</th><th>Z</th></tr>
+        <tr>
+          <td><span class="name">Real PCE</span><br><span class="series">PCEC96</span></td>
+          <td class="mono">$16.7T</td>
+          <td class="mono">+1.67</td>
+        </tr>
+        <tr>
+          <td><span class="name">Consumer Sentiment</span><br><span class="series">UMCSENT</span></td>
+          <td class="mono">56.4</td>
+          <td class="mono">−1.04</td>
+        </tr>
+        <tr>
+          <td><span class="name">Retail Sales</span><br><span class="series">RSAFS</span></td>
+          <td class="mono">$735B</td>
+          <td class="mono">+1.47</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <h3>Credit Stress</h3>
+        <span class="score-badge badge-elevated" style="font-size:0.65rem"><span class="badge-dot" style="background:var(--elevated-dot)"></span> Elevated</span>
+      </div>
+      <table class="detail-table">
+        <tr><th>Indicator</th><th>Value</th><th>Z</th></tr>
+        <tr>
+          <td><span class="name">HY Credit Spreads</span><br><span class="series">BAMLH0A0HYM2</span></td>
+          <td class="mono">2.86%</td>
+          <td class="mono">+0.45</td>
+        </tr>
+        <tr>
+          <td><span class="name">CCC & Lower Spreads</span><br><span class="series">BAMLH0A3HYC</span></td>
+          <td class="mono">8.87%</td>
+          <td class="mono">+1.06</td>
+        </tr>
+        <tr>
+          <td><span class="name">Consumer Loan Delinq.</span><br><span class="series">DRCLACBS</span></td>
+          <td class="mono">2.72%</td>
+          <td class="mono">+0.50</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <h3>Mortgage Stress</h3>
+        <span class="score-badge badge-normal" style="font-size:0.65rem"><span class="badge-dot" style="background:var(--normal-dot)"></span> Normal</span>
+      </div>
+      <table class="detail-table">
+        <tr><th>Indicator</th><th>Value</th><th>Z</th></tr>
+        <tr>
+          <td><span class="name">SF Mortgage Delinquency</span><br><span class="series">DRSFRMACBS</span></td>
+          <td class="mono">1.78%</td>
+          <td class="mono">−0.51</td>
+        </tr>
+      </table>
+      <div style="padding: 1rem 1.25rem; font-size:0.78rem; color:var(--text-secondary); line-height:1.6;">
+        The final link in the displacement chain. In the scenario, this would be the last indicator to deteriorate — lagging displacement by 12–18 months.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- METHODOLOGY -->
+<section class="methodology">
+  <h2>Methodology</h2>
+  <p>The Displacement Index tracks a specific economic hypothesis: that rapid AI capability improvement could trigger a chain reaction through white-collar labor markets, consumer spending, credit markets, and housing.</p>
+  <p>Each chain link is scored using z-scores against 5-year historical distributions. A reading above 0.5σ is <strong>elevated</strong>, above 1.0σ is <strong>warning</strong>, above 2.0σ is <strong>critical</strong>. The composite index averages all five links on a 0–100 scale.</p>
+  <p>All data sourced from the Federal Reserve Economic Database (FRED) and the Bureau of Labor Statistics. Credit spreads update daily; employment and spending indicators update monthly; delinquency data updates quarterly.</p>
+</section>
+
+<footer>
+  <span>The Displacement Index · Not financial advice · Data from FRED & BLS</span>
+  <span><a href="#">Methodology</a> · <a href="#">GitHub ↗</a></span>
+</footer>
+
+</body>
+</html>

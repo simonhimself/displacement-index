@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Displacement Index — Is AI prosperity reaching the real economy?</title>
+<meta name="description" content="Tracking whether AI-driven productivity gains translate into broad prosperity — or hollow out the economy through white-collar displacement, spending collapse, and credit stress.">
+
+<!-- OG -->
+<meta property="og:title" content="The Displacement Index">
+<meta property="og:description" content="Five linked economic signals tracking whether AI prosperity is reaching the real economy.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://displacementindex.com">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="The Displacement Index">
+<meta name="twitter:description" content="Is AI prosperity reaching the real economy? We track five linked economic signals to find out.">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,400&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">The Displacement <span>Index</span></div>
+  <div class="nav-links">
+    <a href="#dashboard">Dashboard</a>
+    <a href="pages/methodology.html">Methodology</a>
+    <a href="pages/about.html">About</a>
+    <a href="https://github.com/" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+  <button class="nav-mobile" aria-label="Menu">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+  </button>
+</nav>
+
+<section class="hero">
+  <div class="hero-eyebrow">
+    Economic Indicator · Updated <span id="hero-date">—</span>
+  </div>
+  <h1>Is AI prosperity reaching the real economy?</h1>
+  <p class="subtitle">We track five linked economic signals to measure whether AI-driven productivity gains are translating into broad prosperity — or hollowing out the economy from the inside.</p>
+</section>
+
+<section class="composite" id="dashboard">
+  <div class="score-block">
+    <div class="score-eyebrow">Composite Score</div>
+    <div class="score-number" id="composite-score">—</div>
+    <div class="score-of">/100</div>
+    <div class="score-meter">
+      <div class="score-meter-fill" id="composite-meter"></div>
+    </div>
+    <div class="score-meter-labels">
+      <span>Normal</span>
+      <span>Critical</span>
+    </div>
+    <div id="composite-badge"></div>
+    <div class="score-updated" id="score-updated"></div>
+  </div>
+
+  <div class="chain-overview" id="chain-overview">
+    <!-- Populated by JS -->
+  </div>
+</section>
+
+<!-- GHOST GDP -->
+<section class="section" id="ghost-gdp-section">
+  <div class="section-header">
+    <h2>Ghost GDP</h2>
+    <span class="section-badge">Featured Indicator</span>
+  </div>
+  <div class="ghost-grid">
+    <div class="ghost-bars">
+      <div class="ghost-bar-row">
+        <div class="ghost-bar-meta">
+          <span class="ghost-bar-name">Productivity Growth (YoY)</span>
+          <span class="ghost-bar-value" id="ghost-prod-value" style="color:var(--accent)">—</span>
+        </div>
+        <div class="ghost-track">
+          <div class="ghost-fill productivity" id="ghost-prod-bar" style="width: 0%"></div>
+        </div>
+      </div>
+      <div class="ghost-bar-row">
+        <div class="ghost-bar-meta">
+          <span class="ghost-bar-name">Real Wage Growth (YoY)</span>
+          <span class="ghost-bar-value" id="ghost-wage-value">—</span>
+        </div>
+        <div class="ghost-track">
+          <div class="ghost-fill wages" id="ghost-wage-bar" style="width: 0%"></div>
+        </div>
+      </div>
+      <p class="ghost-explainer">When productivity grows but wages don't follow, output appears in GDP but never reaches workers. A persistent and widening gap would signal the emergence of "Ghost GDP" — growth that exists on paper but not in people's lives.</p>
+    </div>
+    <div class="ghost-gap-card">
+      <div class="ghost-gap-label">The Gap</div>
+      <div class="ghost-gap-value" id="ghost-gap-value">—</div>
+      <div class="ghost-gap-desc" id="ghost-gap-desc">Loading...</div>
+    </div>
+  </div>
+</section>
+
+<!-- INDICATOR DETAIL -->
+<section class="section" id="detail-section">
+  <div class="section-header">
+    <h2>Indicator Detail</h2>
+    <span class="section-badge">All Data Points</span>
+  </div>
+  <div class="details-grid" id="details-grid">
+    <!-- Populated by JS -->
+  </div>
+</section>
+
+<!-- INDEED JOB POSTINGS -->
+<section class="section" id="indeed-section">
+  <!-- Populated by JS -->
+</section>
+
+<!-- ECONOMIC CONTEXT -->
+<section class="section" id="context-section">
+  <!-- Populated by JS -->
+</section>
+
+<!-- CHARTS (one per chain link) -->
+<section class="section" id="charts-section">
+  <div class="section-header">
+    <h2>Historical Trends</h2>
+    <span class="section-badge">5-Year History</span>
+  </div>
+  <div class="charts-grid" id="charts-grid">
+    <!-- Populated by JS with Chart.js canvases -->
+  </div>
+</section>
+
+<!-- METHODOLOGY TEASER -->
+<section class="methodology">
+  <h2>Methodology</h2>
+  <p>The Displacement Index tracks a specific economic hypothesis: that rapid AI capability improvement could trigger a chain reaction through white-collar labor markets, consumer spending, credit markets, and housing.</p>
+  <p>Each chain link is scored using z-scores against 5-year historical distributions. A reading above 0.5σ is <strong>elevated</strong>, above 1.0σ is <strong>warning</strong>, above 2.0σ is <strong>critical</strong>. The composite index averages all five links on a 0–100 scale.</p>
+  <p>All data sourced from the Federal Reserve Economic Database (FRED) and the Bureau of Labor Statistics. Credit spreads update daily; employment and spending indicators update monthly; delinquency data updates quarterly.</p>
+  <p><a href="pages/methodology.html" style="color:var(--accent); font-weight:500;">Read full methodology →</a></p>
+</section>
+
+<footer>
+  <span>The Displacement Index · Not financial advice · Data from FRED & BLS</span>
+  <span><a href="pages/methodology.html">Methodology</a> · <a href="https://github.com/" target="_blank" rel="noopener">GitHub ↗</a></span>
+</footer>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

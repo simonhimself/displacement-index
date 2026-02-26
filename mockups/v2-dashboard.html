@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Displacement Index — V2 Data Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #F6F6F4;
+    --surface: #FFFFFF;
+    --text: #111111;
+    --text-secondary: #555555;
+    --text-tertiary: #999999;
+    --border: #E0E0DE;
+    --normal: #10B981;
+    --elevated: #F59E0B;
+    --warning: #F97316;
+    --critical: #EF4444;
+    --blue: #3B82F6;
+  }
+
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--text);
+    color: white;
+    padding: 3rem 2rem 2.5rem;
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+  }
+  header .tagline {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 2rem;
+  }
+
+  /* HEADLINE STATS ROW */
+  .headline-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 2rem;
+    align-items: end;
+  }
+  .headline-score {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .headline-score .label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 0.5rem;
+  }
+  .headline-score .number {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 3.5rem;
+    font-weight: 500;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+  .headline-score .status-pill {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    background: var(--normal);
+    color: white;
+  }
+
+  /* CHAIN INDICATORS IN HEADER */
+  .chain-mini {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .chain-mini-item {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    flex: 1;
+    min-width: 140px;
+  }
+  .chain-mini-item .mini-name {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+  }
+  .chain-mini-item .mini-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .dot-normal { background: var(--normal); }
+  .dot-elevated { background: var(--elevated); }
+  .dot-warning { background: var(--warning); }
+  .dot-critical { background: var(--critical); }
+
+  /* MAIN GRID */
+  .main-grid {
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .main-grid.full { grid-template-columns: 1fr; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .card-header h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .card-header .card-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .badge-normal { background: #ECFDF5; color: #065F46; }
+  .badge-elevated { background: #FFFBEB; color: #92400E; }
+  .badge-warning { background: #FFF7ED; color: #9A3412; }
+
+  .card-body { padding: 1.25rem; }
+
+  /* DATA TABLE */
+  .data-table {
+    width: 100%;
+    font-size: 0.85rem;
+    border-collapse: collapse;
+  }
+  .data-table th {
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    padding: 0 0 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #F5F5F3;
+    vertical-align: middle;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table .mono {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .data-table .secondary { color: var(--text-secondary); font-size: 0.8rem; }
+
+  /* MINI CHART PLACEHOLDER */
+  .mini-chart {
+    height: 40px;
+    background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
+    border-radius: 4px;
+    display: flex;
+    align-items: flex-end;
+    padding: 4px;
+    gap: 2px;
+  }
+  .mini-chart .bar {
+    flex: 1;
+    background: var(--normal);
+    border-radius: 2px 2px 0 0;
+    opacity: 0.6;
+  }
+
+  /* GHOST GDP CARD */
+  .ghost-gdp-viz {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 1rem 0;
+  }
+  .ghost-bar-group {
+    flex: 1;
+  }
+  .ghost-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    margin-bottom: 0.3rem;
+  }
+  .ghost-bar-label span:first-child { color: var(--text-secondary); }
+  .ghost-bar-label span:last-child { font-family: 'IBM Plex Mono', monospace; font-weight: 500; }
+  .ghost-bar {
+    height: 24px;
+    background: #F5F5F3;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .ghost-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+  }
+  .ghost-bar-fill.productivity { background: var(--blue); }
+  .ghost-bar-fill.wages { background: var(--normal); }
+  .ghost-gap {
+    text-align: center;
+    padding: 1rem;
+    background: #FAFAF8;
+    border-radius: 8px;
+    min-width: 100px;
+  }
+  .ghost-gap .gap-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+  }
+  .ghost-gap .gap-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 500;
+  }
+
+  /* FOOTER */
+  footer {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+  }
+  footer a { color: var(--text-secondary); text-decoration: none; }
+
+  .updated-badge {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.4);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  @media (max-width: 768px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .headline-row { grid-template-columns: 1fr; }
+    .ghost-gdp-viz { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <h1>The Displacement Index</h1>
+    <div class="tagline">Is AI prosperity reaching the real economy?</div>
+
+    <div class="headline-row">
+      <div class="headline-score">
+        <div class="label">Composite Score</div>
+        <div class="number">5</div>
+        <div class="status-pill">Normal</div>
+      </div>
+
+      <div class="chain-mini">
+        <div class="chain-mini-item">
+          <div class="mini-name">1 · Displacement</div>
+          <div class="mini-status" style="color:white"><span class="dot dot-normal"></span> Normal</div>
+        </div>
+        <div class="chain-mini-item">
+          <div class="mini-name">2 · Spending</div>
+          <div class="mini-status" style="color:white"><span class="dot dot-normal"></span> Normal</div>
+        </div>
+        <div class="chain-mini-item">
+          <div class="mini-name">3 · Ghost GDP</div>
+          <div class="mini-status" style="color:white"><span class="dot dot-normal"></span> Normal</div>
+        </div>
+        <div class="chain-mini-item">
+          <div class="mini-name">4 · Credit</div>
+          <div class="mini-status" style="color:white"><span class="dot dot-elevated"></span> Elevated</div>
+        </div>
+        <div class="chain-mini-item">
+          <div class="mini-name">5 · Mortgages</div>
+          <div class="mini-status" style="color:white"><span class="dot dot-normal"></span> Normal</div>
+        </div>
+      </div>
+    </div>
+    <div class="updated-badge" style="margin-top:1rem">Updated 2026-02-23T16:08Z · FRED / BLS</div>
+  </div>
+</header>
+
+<div class="main-grid">
+  <!-- DISPLACEMENT -->
+  <div class="card">
+    <div class="card-header">
+      <h3>1 · White-Collar Displacement</h3>
+      <span class="card-badge badge-normal">Normal</span>
+    </div>
+    <div class="card-body">
+      <table class="data-table">
+        <tr>
+          <th>Indicator</th>
+          <th>Value</th>
+          <th>Z-Score</th>
+          <th>Status</th>
+        </tr>
+        <tr>
+          <td>Prof & Business Services UE<br><span class="secondary">LNU04032239 · Monthly</span></td>
+          <td class="mono">4.5%</td>
+          <td class="mono">+0.52</td>
+          <td><span class="card-badge badge-elevated" style="font-size:0.6rem">Elevated</span></td>
+        </tr>
+        <tr>
+          <td>Information Industry UE<br><span class="secondary">LNU04032237 · Monthly</span></td>
+          <td class="mono">5.0%</td>
+          <td class="mono">+0.64</td>
+          <td><span class="card-badge badge-elevated" style="font-size:0.6rem">Elevated</span></td>
+        </tr>
+        <tr>
+          <td>Prof/Sci/Tech Employment<br><span class="secondary">CES6054000001 · Monthly</span></td>
+          <td class="mono">10,815K</td>
+          <td class="mono">+0.73</td>
+          <td><span class="card-badge badge-normal" style="font-size:0.6rem">Normal</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- SPENDING -->
+  <div class="card">
+    <div class="card-header">
+      <h3>2 · Consumer Spending</h3>
+      <span class="card-badge badge-normal">Normal</span>
+    </div>
+    <div class="card-body">
+      <table class="data-table">
+        <tr>
+          <th>Indicator</th>
+          <th>Value</th>
+          <th>Z-Score</th>
+          <th>Status</th>
+        </tr>
+        <tr>
+          <td>Real PCE<br><span class="secondary">PCEC96 · Monthly</span></td>
+          <td class="mono">$16.7T</td>
+          <td class="mono">+1.67</td>
+          <td><span class="card-badge badge-normal" style="font-size:0.6rem">Normal</span></td>
+        </tr>
+        <tr>
+          <td>Consumer Sentiment<br><span class="secondary">UMCSENT · Monthly</span></td>
+          <td class="mono">56.4</td>
+          <td class="mono">−1.04</td>
+          <td><span class="card-badge badge-warning" style="font-size:0.6rem">Warning</span></td>
+        </tr>
+        <tr>
+          <td>Retail Sales<br><span class="secondary">RSAFS · Monthly</span></td>
+          <td class="mono">$735B</td>
+          <td class="mono">+1.47</td>
+          <td><span class="card-badge badge-normal" style="font-size:0.6rem">Normal</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- GHOST GDP - FULL WIDTH -->
+<div class="main-grid full">
+  <div class="card">
+    <div class="card-header">
+      <h3>3 · Ghost GDP</h3>
+      <span class="card-badge badge-normal">Normal</span>
+    </div>
+    <div class="card-body">
+      <div class="ghost-gdp-viz">
+        <div class="ghost-bar-group">
+          <div class="ghost-bar-label">
+            <span>Productivity Growth (YoY)</span>
+            <span>+1.92%</span>
+          </div>
+          <div class="ghost-bar">
+            <div class="ghost-bar-fill productivity" style="width: 64%"></div>
+          </div>
+          <div class="ghost-bar-label">
+            <span>Real Wage Growth (YoY)</span>
+            <span>+1.35%</span>
+          </div>
+          <div class="ghost-bar">
+            <div class="ghost-bar-fill wages" style="width: 45%"></div>
+          </div>
+        </div>
+        <div class="ghost-gap">
+          <div class="gap-label">The Gap</div>
+          <div class="gap-value" style="color: var(--normal)">0.57</div>
+        </div>
+      </div>
+      <div style="font-size:0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
+        When productivity grows but wages don't follow, the output shows up in GDP but never reaches workers. We call this Ghost GDP. Currently the gap is narrow — within historical norms.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main-grid">
+  <!-- CREDIT -->
+  <div class="card">
+    <div class="card-header">
+      <h3>4 · Credit Stress</h3>
+      <span class="card-badge badge-elevated">Elevated</span>
+    </div>
+    <div class="card-body">
+      <table class="data-table">
+        <tr>
+          <th>Indicator</th>
+          <th>Value</th>
+          <th>Z-Score</th>
+          <th>Status</th>
+        </tr>
+        <tr>
+          <td>HY Credit Spreads<br><span class="secondary">BAMLH0A0HYM2 · Daily</span></td>
+          <td class="mono">2.86%</td>
+          <td class="mono">+0.45</td>
+          <td><span class="card-badge badge-normal" style="font-size:0.6rem">Normal</span></td>
+        </tr>
+        <tr>
+          <td>CCC & Lower Spreads<br><span class="secondary">BAMLH0A3HYC · Daily</span></td>
+          <td class="mono">8.87%</td>
+          <td class="mono">+1.06</td>
+          <td><span class="card-badge badge-warning" style="font-size:0.6rem">Warning</span></td>
+        </tr>
+        <tr>
+          <td>Consumer Loan Delinquency<br><span class="secondary">DRCLACBS · Quarterly</span></td>
+          <td class="mono">2.72%</td>
+          <td class="mono">+0.50</td>
+          <td><span class="card-badge badge-elevated" style="font-size:0.6rem">Elevated</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- MORTGAGE -->
+  <div class="card">
+    <div class="card-header">
+      <h3>5 · Mortgage Stress</h3>
+      <span class="card-badge badge-normal">Normal</span>
+    </div>
+    <div class="card-body">
+      <table class="data-table">
+        <tr>
+          <th>Indicator</th>
+          <th>Value</th>
+          <th>Z-Score</th>
+          <th>Status</th>
+        </tr>
+        <tr>
+          <td>SF Mortgage Delinquency<br><span class="secondary">DRSFRMACBS · Quarterly</span></td>
+          <td class="mono">1.78%</td>
+          <td class="mono">−0.51</td>
+          <td><span class="card-badge badge-normal" style="font-size:0.6rem">Normal</span></td>
+        </tr>
+      </table>
+      <div style="font-size:0.8rem; color: var(--text-secondary); margin-top: 1.5rem;">
+        Mortgage delinquency is the final link in the displacement chain. Currently well within historical norms. In the displacement scenario, this would be the last indicator to deteriorate.
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div>The Displacement Index · Not financial advice · All data from public government databases</div>
+  <div><a href="#">Methodology</a> · <a href="#">GitHub</a></div>
+</footer>
+
+</body>
+</html>
