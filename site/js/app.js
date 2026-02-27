@@ -52,6 +52,40 @@ const CHAIN_LINKS = {
   },
 };
 
+// Chain-level tooltips (same behavior/style as the rest of the site tooltips)
+const CHAIN_TOOLTIP_DEFS = {
+  'chain:displacement': {
+    title: 'Link 1: White-Collar Displacement',
+    bodyHtml: 'The <strong>first domino</strong>. If AI tools replace knowledge workers faster than the economy can reabsorb them, unemployment in professional and technical sectors rises before it shows up in headline numbers.',
+    contextHtml: '<span class="chain-emoji">🔗</span><strong>Chain position:</strong> This is the trigger. Rising white-collar unemployment → reduced household income → feeds into <strong>Link 2: Consumer Spending</strong>.',
+    source: 'BLS / FRED · LNU04032239, LNU04032237, CES6054000001',
+  },
+  'chain:spending': {
+    title: 'Link 2: Consumer Spending',
+    bodyHtml: 'Household transmission layer. As displacement pressures income and confidence, <strong>aggregate consumer demand falls</strong> — connecting labor stress to broader slowdown and credit dependence.',
+    contextHtml: '<span class="chain-emoji">🔗</span><strong>Chain position:</strong> Fed by <strong>Link 1</strong> (job losses → less income). Feeds into <strong>Link 3: Ghost GDP</strong> and <strong>Link 4: Credit Stress</strong>.',
+    source: 'BEA, UMich, Census / FRED · PCEC96, UMCSENT, RSAFS',
+  },
+  'chain:ghost_gdp': {
+    title: 'Link 3: Ghost GDP',
+    bodyHtml: 'The <strong>smoke signal</strong>. Productivity rises while wages lag, so output can look healthy in aggregate while household purchasing power falls behind.',
+    contextHtml: '<span class="chain-emoji">🔗</span><strong>Chain position:</strong> Confirms mechanism between early labor stress and later financial stress. Persistent divergence increases pressure on <strong>Link 4: Credit Stress</strong>.',
+    source: 'BLS / FRED · OPHNFB, LES1252881600Q, M2V',
+  },
+  'chain:credit_stress': {
+    title: 'Link 4: Credit Stress',
+    bodyHtml: 'The <strong>amplifier</strong>. When income doesn\'t keep pace, households lean on credit. Widening spreads and rising delinquencies indicate stress transmission from labor/spending into financial conditions.',
+    contextHtml: '<span class="chain-emoji">🔗</span><strong>Chain position:</strong> Downstream from <strong>Links 1–3</strong>. Sustained stress here can cascade into <strong>Link 5: Mortgage Stress</strong>.',
+    source: 'ICE BofA, FDIC / FRED · BAMLH0A0HYM2, BAMLH0A3HYC, DRCLACBS',
+  },
+  'chain:mortgage_stress': {
+    title: 'Link 5: Mortgage & Housing Stress',
+    bodyHtml: 'The <strong>final link</strong>. Mortgage delinquency usually lags earlier stress by 12–18 months, so activation here suggests displacement pressure has become systemic.',
+    contextHtml: '<span class="chain-emoji">🔗</span><strong>Chain position:</strong> End of chain. Typically fires only after sustained deterioration in <strong>Links 1–4</strong>.',
+    source: 'FDIC / FRED · DRSFRMACBS',
+  },
+};
+
 // Human-readable indicator names
 const INDICATOR_NAMES = {
   LNU04032239: 'Prof & Biz Services UE',
@@ -208,6 +242,8 @@ const TOOLTIP_DEFS = {
   },
 };
 
+Object.assign(TOOLTIP_DEFS, CHAIN_TOOLTIP_DEFS);
+
 // ---- HELPERS ----
 
 function makeBadge(status, size = '') {
@@ -313,12 +349,18 @@ function renderChainOverview(data) {
       headlineValue = `z: ${linkData.z_score !== null ? (linkData.z_score > 0 ? '+' : '') + linkData.z_score.toFixed(2) : '—'}`;
     }
 
+    const chainTipKey = `chain:${linkId}`;
+    const hasChainTip = !!TOOLTIP_DEFS[chainTipKey];
+    const chainTitle = hasChainTip
+      ? `<span class="tip" tabindex="0" data-key="${chainTipKey}">${meta.name} <span class="i">i</span></span>`
+      : meta.name;
+
     const item = document.createElement('div');
     item.className = 'chain-item';
     item.innerHTML = `
       <div class="chain-num">${meta.num}</div>
       <div class="chain-label">
-        <h3>${meta.name}</h3>
+        <h3>${chainTitle}</h3>
         <p>${meta.desc}</p>
       </div>
       <div class="chain-value">
@@ -770,6 +812,7 @@ function initTooltips() {
 
   const popTitle = document.getElementById('popTitle');
   const popBody = document.getElementById('popBody');
+  const popContext = document.getElementById('popContext');
   const popSource = document.getElementById('popSource');
   const popDot = document.getElementById('popDot');
   const popStatus = document.getElementById('popStatus');
@@ -785,8 +828,27 @@ function initTooltips() {
     const def = TOOLTIP_DEFS[key];
     if (!def) return;
 
-    popTitle.textContent = def.title;
-    popBody.textContent = def.body;
+    popTitle.textContent = def.title || 'Details';
+
+    const hasRichBody = !!def.bodyHtml;
+    if (hasRichBody) {
+      popBody.innerHTML = def.bodyHtml;
+    } else {
+      popBody.textContent = def.body || '';
+    }
+
+    const hasContext = !!def.contextHtml;
+    if (popContext) {
+      if (hasContext) {
+        popContext.innerHTML = def.contextHtml;
+        popContext.hidden = false;
+      } else {
+        popContext.hidden = true;
+        popContext.innerHTML = '';
+      }
+    }
+
+    pop.classList.toggle('popover-rich', hasContext || hasRichBody);
     popSource.textContent = def.source ? `Source: ${def.source}` : '';
 
     // Status dot — hidden for tooltips without status context
@@ -796,21 +858,25 @@ function initTooltips() {
     // Position below trigger, left-aligned, clamped to viewport
     const r = el.getBoundingClientRect();
     const margin = 12;
-    const popW = Math.min(420, window.innerWidth - 32);
+    const popW = Math.min(hasContext ? 560 : 420, window.innerWidth - 32);
     let left = r.left;
     if (left + popW > window.innerWidth - margin) left = window.innerWidth - popW - margin;
     if (left < margin) left = margin;
 
+    // Measure content-aware height before deciding above/below
+    pop.style.left = left + 'px';
+    pop.style.top = '0px';
+    pop.style.bottom = 'auto';
+    const popH = Math.max(pop.offsetHeight || 0, hasContext ? 240 : 180);
+
     let top = r.bottom + 10;
     // If too close to bottom, show above
-    if (top + 200 > window.innerHeight) {
-      top = r.top - 10;
-      pop.style.bottom = (window.innerHeight - top) + 'px';
-      pop.style.top = 'auto';
-    } else {
-      pop.style.top = top + 'px';
-      pop.style.bottom = 'auto';
+    if (top + popH > window.innerHeight - margin) {
+      top = Math.max(margin, r.top - popH - 10);
     }
+
+    pop.style.top = top + 'px';
+    pop.style.bottom = 'auto';
     pop.style.left = left + 'px';
 
     pop.classList.add('show');
