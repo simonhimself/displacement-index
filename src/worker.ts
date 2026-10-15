@@ -330,10 +330,10 @@ function isRetryableStatus(status: number): boolean {
 }
 
 function backoffMs(attempt: number): number {
-  const base = 300;
+  const base = 500;
   const exp = base * Math.pow(2, Math.max(0, attempt - 1));
-  const jitter = Math.floor(Math.random() * 120);
-  return Math.min(2500, exp + jitter);
+  const jitter = Math.floor(Math.random() * 250);
+  return Math.min(4000, exp + jitter);
 }
 
 async function fetchWithRetry(
@@ -365,7 +365,11 @@ async function fetchWithRetry(
     } catch (e) {
       clearTimeout(timeout);
       const err = e as Error;
-      lastError = err;
+      // Always prefix the label so callers (and logs) know which request failed,
+      // e.g. "FRED UNRATE: The operation was aborted (attempt 3/3)".
+      lastError = err.message.startsWith(opts.label)
+        ? err
+        : new Error(`${opts.label}: ${err.message} (attempt ${attempt}/${retries})`);
 
       if (attempt === retries) break;
       await sleep(backoffMs(attempt));
@@ -440,6 +444,28 @@ async function releaseRefreshLock(env: Env, owner: string): Promise<void> {
 
 // ---- Fetchers ----
 
+const FRED_TIMEOUT_MS = 25000;
+const FRED_RETRIES = 3;
+const FRED_CONCURRENCY = 4;
+
+/** Run async tasks with at most `limit` in flight; results keep input order. */
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      try {
+        results[i] = { status: 'fulfilled', value: await fn(items[i]) };
+      } catch (reason) {
+        results[i] = { status: 'rejected', reason };
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 async function fetchFredSeries(env: Env, seriesId: string, observationStart: string): Promise<Obs[]> {
   const url = new URL(FRED_BASE);
   url.searchParams.set('series_id', seriesId);
@@ -455,8 +481,8 @@ async function fetchFredSeries(env: Env, seriesId: string, observationStart: str
     },
     {
       label: `FRED ${seriesId}`,
-      timeoutMs: 12000,
-      retries: 3,
+      timeoutMs: FRED_TIMEOUT_MS,
+      retries: FRED_RETRIES,
     },
   );
 
@@ -786,25 +812,23 @@ async function refreshAll(env: Env, ctx: RefreshContext): Promise<RefreshSuccess
     chain_links: {},
   };
 
-  const seriesTasks: Array<Promise<{ linkId: string; seriesId: string; meta: FredSeriesMeta; observations: Obs[] }>> = [];
-
+  const seriesJobs: Array<{ linkId: string; seriesId: string; meta: FredSeriesMeta }> = [];
   for (const [linkId, seriesMap] of Object.entries(FRED_SERIES)) {
     fred.chain_links[linkId] = {};
     for (const [seriesId, meta] of Object.entries(seriesMap)) {
-      seriesTasks.push(
-        (async () => {
-          const observations = await fetchFredSeries(env, seriesId, observationStart);
-          return { linkId, seriesId, meta, observations };
-        })(),
-      );
+      seriesJobs.push({ linkId, seriesId, meta });
     }
   }
 
-  const fredResults = await Promise.allSettled(seriesTasks);
+  // Limited concurrency: firing every series at once made FRED requests time out.
+  const fredResults = await mapLimit(seriesJobs, FRED_CONCURRENCY, async (job) => {
+    const observations = await fetchFredSeries(env, job.seriesId, observationStart);
+    return { ...job, observations };
+  });
   const missingSeries: string[] = [];
   let fredFallbackCount = 0;
 
-  for (const r of fredResults) {
+  fredResults.forEach((r, i) => {
     if (r.status === 'fulfilled') {
       const { linkId, seriesId, meta, observations } = r.value;
       fred.chain_links[linkId][seriesId] = {
@@ -814,33 +838,24 @@ async function refreshAll(env: Env, ctx: RefreshContext): Promise<RefreshSuccess
         latest: observations.length ? observations[observations.length - 1] : null,
         count: observations.length,
       };
-      continue;
+      return;
     }
 
+    const { linkId, seriesId } = seriesJobs[i];
     const message = r.reason instanceof Error ? r.reason.message : String(r.reason);
-    const match = /FRED\s+([A-Z0-9]+)/.exec(message);
-    const seriesId = match?.[1] || 'UNKNOWN_SERIES';
 
-    // Try to fallback to previous snapshot for this series.
-    let filled = false;
-    if (previousFred) {
-      for (const [prevLinkId, prevSeriesMap] of Object.entries(previousFred.chain_links || {})) {
-        const prevSeries = (prevSeriesMap as Record<string, FredSeries>)[seriesId];
-        if (prevSeries) {
-          fred.chain_links[prevLinkId] ||= {};
-          fred.chain_links[prevLinkId][seriesId] = prevSeries;
-          filled = true;
-          fredFallbackCount += 1;
-          warnings.push(`FRED ${seriesId} fallback to previous snapshot`);
-          break;
-        }
-      }
-    }
-
-    if (!filled) {
+    // Per-series fallback to the last good snapshot (same link first, then any link).
+    const prevLinks = (previousFred?.chain_links || {}) as Record<string, Record<string, FredSeries>>;
+    const prevSeries = prevLinks[linkId]?.[seriesId]
+      ?? Object.values(prevLinks).map((m) => m?.[seriesId]).find(Boolean);
+    if (prevSeries) {
+      fred.chain_links[linkId][seriesId] = prevSeries;
+      fredFallbackCount += 1;
+      warnings.push(`FRED ${seriesId} fallback to previous snapshot (${message})`);
+    } else {
       missingSeries.push(`${seriesId}: ${message}`);
     }
-  }
+  });
 
   if (missingSeries.length) {
     throw new Error(`Critical FRED fetch failures (no fallback): ${missingSeries.join(' | ')}`);
@@ -1056,7 +1071,11 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
       }
     }
 
-    const healthy = !!lastSuccess && (ageMinutes === null ? true : ageMinutes < 12 * 60) && failures < 3;
+    // Data is "fresh" while the last successful refresh is < 24h old. The HTTP status
+    // follows freshness (so one failed refresh window doesn't page), while `healthy`
+    // still reports false whenever the most recent attempt failed.
+    const fresh = !!lastSuccess && ageMinutes !== null && ageMinutes < 24 * 60;
+    const healthy = fresh && failures === 0;
 
     return jsonResponse(
       {
@@ -1067,13 +1086,14 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
         last_success: lastSuccess,
         last_error: lastError || null,
         consecutive_failures: failures,
+        fresh,
         latest_version: latestVersion,
         last_duration_ms: durationMs,
         age_minutes: ageMinutes,
       },
       {
         // Health checks should treat stale/failed refresh as unhealthy.
-        status: healthy ? 200 : 503,
+        status: fresh ? 200 : 503,
         headers: {
           'cache-control': 'no-store',
         },
