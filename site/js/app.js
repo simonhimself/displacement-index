@@ -7,6 +7,7 @@
 const DATA_PATH = '/api/indicators';
 const FRED_PATH = '/api/fred_raw';
 const INDEED_PATH = '/api/indeed_raw';
+const AI_DISPLACEMENT_PATH = '/api/ai_displacement_aggregates';
 
 // Chain link metadata (static)
 const CHAIN_LINKS = {
@@ -386,7 +387,7 @@ function renderGhostGDP(data) {
     : 'Within normal range.\nWatch for persistent widening.';
 }
 
-function renderDetailCards(data, fredData) {
+function renderDetailCards(data, fredData, aiDisplacementData) {
   const container = document.getElementById('details-grid');
   container.innerHTML = '';
 
@@ -430,9 +431,11 @@ function renderDetailCards(data, fredData) {
         </tr>`;
     }
 
-    // Extra explainer for mortgage
+    // Extra content for displacement and mortgage
     let extra = '';
-    if (linkId === 'mortgage_stress') {
+    if (linkId === 'displacement' && aiDisplacementData) {
+      extra = renderAIDisplacementInset(aiDisplacementData);
+    } else if (linkId === 'mortgage_stress') {
       extra = `<div style="padding:1rem 1.25rem; font-size:0.78rem; color:var(--text-secondary); line-height:1.6;">
         The final link in the displacement chain. In the scenario, this would be the last indicator to deteriorate — lagging displacement by 12–18 months.
       </div>`;
@@ -663,6 +666,70 @@ function renderIndeed(indeedData) {
   }
 }
 
+// ---- AI DISPLACEMENT INSET ----
+
+function renderAIDisplacementInset(aiData) {
+  if (!aiData || !aiData.recent_events || aiData.recent_events.length === 0) {
+    return '';
+  }
+
+  // Get last 3 months of data
+  const recentMonths = aiData.monthly.slice(0, 3);
+  
+  let monthlyHTML = '';
+  for (const month of recentMonths) {
+    const [year, monthNum] = month.month.split('-');
+    const monthName = new Date(parseInt(year), parseInt(monthNum) - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    const workersText = month.workers_affected > 0 
+      ? ` · ${month.workers_affected.toLocaleString()} workers`
+      : '';
+    monthlyHTML += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; font-size:0.82rem;">
+        <span style="font-family:'JetBrains Mono',monospace; color:var(--text-secondary);">${monthName}</span>
+        <span style="font-weight:500; color:var(--text);">${month.event_count} events${workersText}</span>
+      </div>`;
+  }
+
+  // Recent events (max 5)
+  let eventsHTML = '';
+  const eventsToShow = aiData.recent_events.slice(0, 5);
+  for (const event of eventsToShow) {
+    const dateStr = new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const workersStr = event.workers_affected ? ` · ${event.workers_affected.toLocaleString()} workers` : '';
+    const sourceLink = event.source_url ? `<a href="${event.source_url}" target="_blank" rel="noopener" style="color:var(--accent); text-decoration:none; font-size:0.75rem;">↗</a>` : '';
+    
+    eventsHTML += `
+      <div style="padding:0.6rem 0; border-bottom:1px solid var(--border-light); font-size:0.82rem;">
+        <div style="display:flex; justify-content:space-between; align-items:start; gap:0.5rem;">
+          <div style="flex:1;">
+            <strong style="color:var(--text); font-size:0.85rem;">${event.company}</strong>
+            <div style="color:var(--text-secondary); font-size:0.75rem; margin-top:0.2rem;">
+              ${dateStr} · ${event.sector}${workersStr}
+            </div>
+          </div>
+          ${sourceLink}
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div style="padding:1rem 1.25rem; border-top:1px solid var(--border); background:rgba(0,0,0,0.01);">
+      <div style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-tertiary); margin-bottom:0.75rem;">
+        AI-Attributed Layoffs
+      </div>
+      <div style="margin-bottom:1rem;">
+        ${monthlyHTML}
+      </div>
+      <div style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-tertiary); margin:1rem 0 0.5rem;">
+        Recent Events
+      </div>
+      ${eventsHTML}
+      <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid var(--border-light); font-size:0.7rem; color:var(--text-tertiary);">
+        Source: <a href="https://github.com/noahaust2/ai-displacement-tracker" target="_blank" rel="noopener" style="color:var(--accent); text-decoration:none;">AI Job Displacement Tracker</a> (CC-BY-4.0)
+      </div>
+    </div>`;
+}
+
 // ---- CONTEXT INDICATORS ----
 
 function renderContext(fredData) {
@@ -723,12 +790,13 @@ function renderContext(fredData) {
 
 async function init() {
   try {
-    let indicators, fredData, indeedData;
+    let indicators, fredData, indeedData, aiDisplacementData;
 
     if (window.__INLINE_DATA__) {
       indicators = window.__INDICATORS__;
       fredData = window.__FRED_RAW__;
       indeedData = window.__INDEED_RAW__ || null;
+      aiDisplacementData = window.__AI_DISPLACEMENT__ || null;
     } else {
       const [indicatorsRes, fredRes] = await Promise.all([
         fetch(DATA_PATH),
@@ -743,6 +811,12 @@ async function init() {
         const indeedRes = await fetch(INDEED_PATH);
         if (indeedRes.ok) indeedData = await indeedRes.json();
       } catch (e) { /* optional */ }
+
+      // AI Displacement is optional
+      try {
+        const aiDispRes = await fetch(AI_DISPLACEMENT_PATH);
+        if (aiDispRes.ok) aiDisplacementData = await aiDispRes.json();
+      } catch (e) { /* optional */ }
     }
 
     renderComposite(indicators);
@@ -750,7 +824,7 @@ async function init() {
     renderChainOverview(indicators);
     populateChainValues(fredData, indicators);
     renderGhostGDP(indicators);
-    renderDetailCards(indicators, fredData);
+    renderDetailCards(indicators, fredData, aiDisplacementData);
     renderIndeed(indeedData);
     renderContext(fredData);
     renderCharts(fredData);

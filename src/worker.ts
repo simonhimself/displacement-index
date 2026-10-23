@@ -53,6 +53,34 @@ type IndeedRaw = {
   >;
 };
 
+type AIDisplacementEvent = {
+  company: string;
+  date: string;
+  sector: string;
+  job_functions: string[];
+  workers_affected: number | null;
+  source_url: string;
+  notes?: string;
+};
+
+type AIDisplacementRaw = {
+  fetched_at: string;
+  source: string;
+  attribution: string;
+  events: AIDisplacementEvent[];
+  count: number;
+};
+
+type AIDisplacementAggregates = {
+  monthly: Array<{
+    month: string;
+    event_count: number;
+    workers_affected: number;
+  }>;
+  by_sector: Record<string, { event_count: number; workers_affected: number }>;
+  recent_events: AIDisplacementEvent[];
+};
+
 type RefreshSource = 'cron' | 'manual';
 
 type RefreshContext = {
@@ -66,6 +94,7 @@ type RefreshSuccess = {
   indicators: any;
   fred: FredRaw;
   indeed: IndeedRaw;
+  aiDisplacement: AIDisplacementRaw;
   warnings: string[];
   durationMs: number;
 };
@@ -237,13 +266,17 @@ const INDEED_TARGET_SECTORS = new Set([
   'Accounting',
 ]);
 
+// AI Job Displacement Tracker (CC-BY-4.0)
+const AI_DISPLACEMENT_URL =
+  'https://raw.githubusercontent.com/noahaust2/ai-displacement-tracker/main/data/processed/ai_displacement.json';
+
 // ---- Utils ----
 
 function isoNow(): string {
   return new Date().toISOString();
 }
 
-function snapshotKey(version: string, suffix: 'indicators' | 'fred_raw' | 'indeed_raw'): string {
+function snapshotKey(version: string, suffix: 'indicators' | 'fred_raw' | 'indeed_raw' | 'ai_displacement_raw' | 'ai_displacement_aggregates'): string {
   return `snap:${version}:${suffix}`;
 }
 
@@ -385,7 +418,7 @@ async function getLatestVersion(env: Env): Promise<string | null> {
 
 async function getLatestSnapshot<T>(
   env: Env,
-  suffix: 'indicators' | 'fred_raw' | 'indeed_raw',
+  suffix: 'indicators' | 'fred_raw' | 'indeed_raw' | 'ai_displacement_raw' | 'ai_displacement_aggregates',
 ): Promise<T | null> {
   const version = await getLatestVersion(env);
   if (version) {
@@ -601,6 +634,88 @@ async function fetchIndeed(): Promise<IndeedRaw> {
   };
 }
 
+async function fetchAIDisplacement(): Promise<AIDisplacementRaw> {
+  const resp = await fetchWithRetry(
+    AI_DISPLACEMENT_URL,
+    {},
+    { label: 'AI Displacement Tracker', timeoutMs: 12000, retries: 3 },
+  );
+
+  const data: any = await resp.json();
+  
+  // Parse and validate events
+  const events: AIDisplacementEvent[] = [];
+  const rawEvents = Array.isArray(data.events) ? data.events : Array.isArray(data) ? data : [];
+
+  for (const e of rawEvents) {
+    if (!e.company || !e.date) continue;
+
+    events.push({
+      company: String(e.company),
+      date: String(e.date),
+      sector: String(e.sector || 'Unknown'),
+      job_functions: Array.isArray(e.job_functions) ? e.job_functions.map(String) : [],
+      workers_affected: typeof e.workers_affected === 'number' ? e.workers_affected : null,
+      source_url: String(e.source_url || e.source || ''),
+      notes: e.notes ? String(e.notes) : undefined,
+    });
+  }
+
+  // Sort by date descending
+  events.sort((a, b) => b.date.localeCompare(a.date));
+
+  if (!events.length) {
+    throw new Error('AI Displacement dataset produced no usable events');
+  }
+
+  return {
+    fetched_at: isoNow(),
+    source: 'AI Job Displacement Tracker (CC-BY-4.0)',
+    attribution: 'AI Job Displacement Tracker, https://github.com/noahaust2/ai-displacement-tracker',
+    events,
+    count: events.length,
+  };
+}
+
+function computeAIDisplacementAggregates(data: AIDisplacementRaw): AIDisplacementAggregates {
+  const monthly = new Map<string, { event_count: number; workers_affected: number }>();
+  const by_sector = new Map<string, { event_count: number; workers_affected: number }>();
+
+  for (const event of data.events) {
+    // Monthly aggregation (YYYY-MM format)
+    const month = event.date.substring(0, 7);
+    const monthData = monthly.get(month) || { event_count: 0, workers_affected: 0 };
+    monthData.event_count += 1;
+    if (event.workers_affected) monthData.workers_affected += event.workers_affected;
+    monthly.set(month, monthData);
+
+    // Sector aggregation
+    const sectorData = by_sector.get(event.sector) || { event_count: 0, workers_affected: 0 };
+    sectorData.event_count += 1;
+    if (event.workers_affected) sectorData.workers_affected += event.workers_affected;
+    by_sector.set(event.sector, sectorData);
+  }
+
+  // Convert to arrays and sort
+  const monthlyArray = Array.from(monthly.entries())
+    .map(([month, data]) => ({ month, ...data }))
+    .sort((a, b) => b.month.localeCompare(a.month));
+
+  const sectorObj: Record<string, { event_count: number; workers_affected: number }> = {};
+  by_sector.forEach((data, sector) => {
+    sectorObj[sector] = data;
+  });
+
+  // Recent events (last 10)
+  const recent_events = data.events.slice(0, 10);
+
+  return {
+    monthly: monthlyArray,
+    by_sector: sectorObj,
+    recent_events,
+  };
+}
+
 // ---- Computation ----
 
 function getSeries(fred: FredRaw, seriesId: string): Obs[] {
@@ -806,6 +921,7 @@ async function refreshAll(env: Env, ctx: RefreshContext): Promise<RefreshSuccess
 
   const previousFred = await getLatestSnapshot<FredRaw>(env, 'fred_raw');
   const previousIndeed = await getLatestSnapshot<IndeedRaw>(env, 'indeed_raw');
+  const previousAIDisplacement = await getLatestSnapshot<AIDisplacementRaw>(env, 'ai_displacement_raw');
 
   const fred: FredRaw = {
     fetched_at: isoNow(),
@@ -873,6 +989,23 @@ async function refreshAll(env: Env, ctx: RefreshContext): Promise<RefreshSuccess
     warnings.push(`Indeed fallback to previous snapshot: ${(e as Error).message}`);
   }
 
+  // AI Displacement Tracker (optional source - must not break refresh)
+  let aiDisplacement: AIDisplacementRaw | null = null;
+  let aiDisplacementStatus: 'fresh' | 'stale' | 'unavailable' = 'fresh';
+
+  try {
+    aiDisplacement = await fetchAIDisplacement();
+  } catch (e) {
+    if (previousAIDisplacement) {
+      aiDisplacement = previousAIDisplacement;
+      aiDisplacementStatus = 'stale';
+      warnings.push(`AI Displacement fallback to previous snapshot: ${(e as Error).message}`);
+    } else {
+      aiDisplacementStatus = 'unavailable';
+      warnings.push(`AI Displacement unavailable (optional source): ${(e as Error).message}`);
+    }
+  }
+
   const derived = {
     ghost_gdp: computeGhostGDP(fred),
     displacement_velocity: computeDisplacementVelocity(fred),
@@ -890,6 +1023,7 @@ async function refreshAll(env: Env, ctx: RefreshContext): Promise<RefreshSuccess
     derived_indicators: derived,
     chain_links: chainLinks,
     indeed_fetched_at: indeed.fetched_at,
+    ai_displacement_fetched_at: aiDisplacement?.fetched_at || null,
     pipeline: {
       version,
       trigger: ctx.trigger,
@@ -897,36 +1031,62 @@ async function refreshAll(env: Env, ctx: RefreshContext): Promise<RefreshSuccess
       source_status: {
         fred: fredFallbackCount > 0 ? 'stale' : 'fresh',
         indeed: indeedStatus,
+        ai_displacement: aiDisplacementStatus,
       },
       fallback_counts: {
         fred_series: fredFallbackCount,
         indeed: indeedStatus === 'stale' ? 1 : 0,
+        ai_displacement: aiDisplacementStatus === 'stale' ? 1 : 0,
       },
       warnings,
     },
   };
 
+  // Compute AI displacement aggregates if available
+  const aiDisplacementAggregates = aiDisplacement ? computeAIDisplacementAggregates(aiDisplacement) : null;
+
   // Versioned snapshots first, pointer flip last (atomic publish model).
-  await Promise.all([
+  const snapshots: Promise<void>[] = [
     env.DI_KV.put(snapshotKey(version, 'indicators'), JSON.stringify(indicators)),
     env.DI_KV.put(snapshotKey(version, 'fred_raw'), JSON.stringify(fred)),
     env.DI_KV.put(snapshotKey(version, 'indeed_raw'), JSON.stringify(indeed)),
-  ]);
+  ];
+
+  if (aiDisplacement) {
+    snapshots.push(env.DI_KV.put(snapshotKey(version, 'ai_displacement_raw'), JSON.stringify(aiDisplacement)));
+  }
+
+  if (aiDisplacementAggregates) {
+    snapshots.push(env.DI_KV.put(snapshotKey(version, 'ai_displacement_aggregates'), JSON.stringify(aiDisplacementAggregates)));
+  }
+
+  await Promise.all(snapshots);
 
   await env.DI_KV.put(KV_KEYS.latestVersion, version);
 
   // Keep legacy keys updated for backwards compatibility.
-  await Promise.all([
+  const legacyUpdates: Promise<void>[] = [
     env.DI_KV.put('latest:indicators', JSON.stringify(indicators)),
     env.DI_KV.put('latest:fred_raw', JSON.stringify(fred)),
     env.DI_KV.put('latest:indeed_raw', JSON.stringify(indeed)),
-  ]);
+  ];
+
+  if (aiDisplacement) {
+    legacyUpdates.push(env.DI_KV.put('latest:ai_displacement_raw', JSON.stringify(aiDisplacement)));
+  }
+
+  if (aiDisplacementAggregates) {
+    legacyUpdates.push(env.DI_KV.put('latest:ai_displacement_aggregates', JSON.stringify(aiDisplacementAggregates)));
+  }
+
+  await Promise.all(legacyUpdates);
 
   return {
     version,
     indicators,
     fred,
     indeed,
+    aiDisplacement: aiDisplacement || { fetched_at: isoNow(), source: '', attribution: '', events: [], count: 0 },
     warnings,
     durationMs: Date.now() - started,
   };
@@ -1116,6 +1276,18 @@ async function handleApi(request: Request, env: Env): Promise<Response> {
   if (url.pathname === '/api/indeed_raw') {
     const data = await getLatestSnapshot<any>(env, 'indeed_raw');
     if (!data) return jsonResponse({ error: 'No data yet.' }, { status: 503 });
+    return jsonResponse(data);
+  }
+
+  if (url.pathname === '/api/ai_displacement_raw') {
+    const data = await getLatestSnapshot<AIDisplacementRaw>(env, 'ai_displacement_raw');
+    if (!data) return jsonResponse({ error: 'AI Displacement data not available yet.' }, { status: 503 });
+    return jsonResponse(data);
+  }
+
+  if (url.pathname === '/api/ai_displacement_aggregates') {
+    const data = await getLatestSnapshot<AIDisplacementAggregates>(env, 'ai_displacement_aggregates');
+    if (!data) return jsonResponse({ error: 'AI Displacement aggregates not available yet.' }, { status: 503 });
     return jsonResponse(data);
   }
 

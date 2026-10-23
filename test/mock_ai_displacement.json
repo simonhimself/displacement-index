@@ -1,0 +1,61 @@
+{
+  "events": [
+    {
+      "company": "Tech Corp",
+      "date": "2026-10-15",
+      "sector": "Technology",
+      "job_functions": ["Software Development", "QA Testing"],
+      "workers_affected": 450,
+      "source_url": "https://example.com/tech-corp-layoffs",
+      "notes": "AI automation of testing workflows"
+    },
+    {
+      "company": "Media Solutions Inc",
+      "date": "2026-09-20",
+      "sector": "Media & Communications",
+      "job_functions": ["Content Writing", "Copyediting"],
+      "workers_affected": 120,
+      "source_url": "https://example.com/media-solutions-layoffs"
+    },
+    {
+      "company": "Financial Services Co",
+      "date": "2026-09-10",
+      "sector": "Banking & Finance",
+      "job_functions": ["Data Analysis", "Research"],
+      "workers_affected": 85,
+      "source_url": "https://example.com/finserv-layoffs"
+    },
+    {
+      "company": "Marketing Agency LLC",
+      "date": "2026-08-25",
+      "sector": "Marketing",
+      "job_functions": ["Content Marketing", "SEO"],
+      "workers_affected": 32,
+      "source_url": "https://example.com/marketing-agency"
+    },
+    {
+      "company": "Consulting Group",
+      "date": "2026-08-10",
+      "sector": "Professional Services",
+      "job_functions": ["Business Analysis", "Research"],
+      "workers_affected": 75,
+      "source_url": "https://example.com/consulting-group"
+    },
+    {
+      "company": "Software Dev Inc",
+      "date": "2026-07-15",
+      "sector": "Technology",
+      "job_functions": ["Software Development", "Technical Writing"],
+      "workers_affected": 200,
+      "source_url": "https://example.com/software-dev-inc"
+    },
+    {
+      "company": "Insurance Corp",
+      "date": "2026-07-05",
+      "sector": "Insurance",
+      "job_functions": ["Claims Processing", "Customer Service"],
+      "workers_affected": 150,
+      "source_url": "https://example.com/insurance-corp"
+    }
+  ]
+}
